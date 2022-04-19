@@ -69,7 +69,8 @@ public class NotificationUtils {
                 context,
                 0,
                 intent,
-                PendingIntent.FLAG_IMMUTABLE
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ?
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
         );
 
 
@@ -82,7 +83,8 @@ public class NotificationUtils {
                 context,
                 0,
                 rejectIntent,
-                PendingIntent.FLAG_IMMUTABLE
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ?
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
         );
 
         // Accept intent
@@ -94,7 +96,8 @@ public class NotificationUtils {
                 context,
                 0,
                 acceptIntent,
-                PendingIntent.FLAG_IMMUTABLE
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ?
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
         );
 
         // Notification
