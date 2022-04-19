@@ -94,7 +94,7 @@ public class NotificationUtils {
                 context,
                 0,
                 acceptIntent,
-                PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT
         );
 
         // Notification
