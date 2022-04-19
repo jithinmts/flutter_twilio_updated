@@ -82,7 +82,7 @@ public class NotificationUtils {
                 context,
                 0,
                 rejectIntent,
-                PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT
         );
 
         // Accept intent
