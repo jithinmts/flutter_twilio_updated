@@ -30,7 +30,15 @@
         <service
             android:name="federico.amura.flutter_twilio.IncomingCallNotificationService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="ACTION_ACCEPT"  />
+                <action android:name="ACTION_REJECT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <meta-data
             android:name="flutterEmbedding"
