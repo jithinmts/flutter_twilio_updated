@@ -14,6 +14,7 @@ import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.TaskStackBuilder;
 
 import com.twilio.voice.CallInvite;
 
@@ -64,41 +65,32 @@ public class NotificationUtils {
                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
                         Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
         );
-        @SuppressLint("UnspecifiedImmutableFlag")
-        PendingIntent pendingIntent = PendingIntent.getActivity(
+//        @SuppressLint("UnspecifiedImmutableFlag")
+/*        PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
                 intent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
                        PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
-        );
+        );*/
 
-
+                PendingIntent pendingIntent = TaskStackBuilder.create(context).addNextIntentWithParentStack(intent).getPendingIntent(0,
+                PendingIntent.FLAG_IMMUTABLE ) ;
         //Reject intent
         Intent rejectIntent = new Intent(context, IncomingCallNotificationService.class);
         rejectIntent.setAction(TwilioConstants.ACTION_REJECT);
         rejectIntent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
-        @SuppressLint("UnspecifiedImmutableFlag")
-        PendingIntent piRejectIntent = PendingIntent.getService(
-                context,
-                0,
-                rejectIntent,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
-                     PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
-        );
+//        @SuppressLint("UnspecifiedImmutableFlag")
+        PendingIntent piRejectIntent = TaskStackBuilder.create(context).addNextIntentWithParentStack(rejectIntent).getPendingIntent(0,
+                PendingIntent.FLAG_IMMUTABLE ) ;
 
         // Accept intent
         Intent acceptIntent = new Intent(context, IncomingCallNotificationService.class);
         acceptIntent.setAction(TwilioConstants.ACTION_ACCEPT);
         acceptIntent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
         @SuppressLint("UnspecifiedImmutableFlag")
-        PendingIntent piAcceptIntent = PendingIntent.getService(
-                context,
-                0,
-                acceptIntent,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
-                       PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
-        );
+        PendingIntent piAcceptIntent = TaskStackBuilder.create(context).addNextIntentWithParentStack(acceptIntent).getPendingIntent(0,
+                PendingIntent.FLAG_IMMUTABLE ) ;
 
         // Notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, createChannel(context, showHeadsUp));
