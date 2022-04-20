@@ -94,7 +94,7 @@ public class NotificationUtils {
         @SuppressLint("UnspecifiedImmutableFlag")
         PendingIntent piAcceptIntent = PendingIntent.getService(
                 context,
-                1,
+                0,
                 acceptIntent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
                        PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
