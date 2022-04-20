@@ -64,7 +64,7 @@ public class NotificationUtils {
                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
                         Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
         );
-        @SuppressLint("UnspecifiedImmutableFlag")
+//        @SuppressLint("UnspecifiedImmutableFlag")
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
@@ -78,7 +78,7 @@ public class NotificationUtils {
         Intent rejectIntent = new Intent(context, IncomingCallNotificationService.class);
         rejectIntent.setAction(TwilioConstants.ACTION_REJECT);
         rejectIntent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
-        @SuppressLint("UnspecifiedImmutableFlag")
+//        @SuppressLint("UnspecifiedImmutableFlag")
         PendingIntent piRejectIntent = PendingIntent.getService(
                 context,
                 0,
@@ -91,7 +91,7 @@ public class NotificationUtils {
         Intent acceptIntent = new Intent(context, IncomingCallNotificationService.class);
         acceptIntent.setAction(TwilioConstants.ACTION_ACCEPT);
         acceptIntent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
-        @SuppressLint("UnspecifiedImmutableFlag")
+//        @SuppressLint("UnspecifiedImmutableFlag")
         PendingIntent piAcceptIntent = PendingIntent.getService(
                 context,
                 0,
