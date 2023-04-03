@@ -76,7 +76,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     
     public func handle(_ flutterCall: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = flutterCall.arguments as? NSDictionary
-        
+
         if flutterCall.method == "makeCall" {
             guard let callTo = arguments?["to"] as? String else {return}
             guard let callData = arguments?["data"] as? NSDictionary else {return}
@@ -230,7 +230,15 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             result("")
             return
         }
-        
+        if flutterCall.method == "sendDigits"
+                {
+                    guard let digits = arguments?["digits"] as? String else {return}
+
+                    self.sendDigits(digits: digits)
+                    result("")
+                    return
+
+                }
     
     }
     
@@ -365,7 +373,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             
         } else {
             NSLog("No contact name saved for number " + phoneNumber)
-            return defaultDisplayName
+            return phoneNumber
         }
     }
     
@@ -408,8 +416,8 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             callResult["speaker"] = false
         }
 
-        if self.callInvite != nill {
-            callResult["customParameters"] = self.callInvite.customParameters
+        if self.callInvite != nil {
+            callResult["customParameters"] = self.callInvite?.customParameters
         }
 
         callResult["toDisplayName"] = self.getToDisplayName()
@@ -445,26 +453,88 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     public func cancelledCallInviteReceived(cancelledCallInvite: CancelledCallInvite, error: Error) {
         NSLog("cancelledCallInviteCanceled:")
 
+//         self.showMissedCallNotification(from: cancelledCallInvite.from, to: cancelledCallInvite.to)
         if (self.callInvite == nil || self.callInvite!.callSid != cancelledCallInvite.callSid) {
             NSLog("No matching pending CallInvite. Ignoring the Cancelled CallInvite")
             return
         }
-        
-        performEndCallAction(uuid: self.callInvite!.uuid)
+
+
+        audioDevice.isEnabled = true
+        performMissedCallAction(uuid: self.callInvite!.uuid,cancelledCallInvite: cancelledCallInvite)
         self.incomingPushHandled()
     }
-    
+    func showMissedCallNotification(from:String?, to:String?){
+       // guard UserDefaults.standard.set(forKey: "show-notifications") ?? true else{return}
+        let notificationCenter = UNUserNotificationCenter.current()
+        notificationCenter.getNotificationSettings { (settings) in
+             NSLog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+          if settings.authorizationStatus == .authorized {
+             NSLog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!2")
+            let content = UNMutableNotificationContent()
+            var userName:String?
+            if var from = from{
+             NSLog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!3")
+                from = from.replacingOccurrences(of: "client:", with: "")
+                content.userInfo = ["type":"twilio-missed-call", "From":from]
+                if let to = to{
+             NSLog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!4")
+                    content.userInfo["To"] = to
+                }
+                userName = UserDefaults.standard.string(forKey: "_defaultDisplayName") ?? from ?? ""
+            }
+            let title = userName ?? UserDefaults.standard.string(forKey: "_defaultDisplayName") ?? from ?? ""
+            content.title = String(format:  NSLocalizedString("Missed Call", comment: ""),from!)
+            content.subtitle = String(format:  NSLocalizedString(from!, comment: ""),from!)
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            let request = UNNotificationRequest(identifier: UUID().uuidString,
+                                                content: content,
+                                                trigger: trigger)
+
+                notificationCenter.add(request) { (error) in
+                    if let error = error {
+                        print("Notification Error: ", error)
+                    }
+                }
+
+          }
+        }
+    }
     func callDisconnected(id: UUID, error: String?) {
-        self.call = nil
-        self.callInvite = nil
-        self.fromDisplayName = nil
-        self.toDisplayName = nil
-        self.callKitCompletionCallback = nil
+//         self.call = nil
+//         self.callInvite = nil
+//         self.fromDisplayName = nil
+//         self.toDisplayName = nil
+//         self.callKitCompletionCallback = nil
         self.userInitiatedDisconnect = false
 
         DispatchQueue.main.async {
             self.callStatus = "callDisconnected"
             self.channel?.invokeMethod("callDisconnected", arguments: nil)
+        }
+
+
+        var reason = CXCallEndedReason.remoteEnded
+
+        if error != nil {
+            NSLog("Hubo un error en el did disconect, entonces pongo que se corta por un error")
+            reason = .failed
+        }
+
+        self.callKitProvider.reportCall(with: id, endedAt: Date(), reason: reason)
+
+    }
+    func callDisconnectedMissCall(id: UUID, error: String?,cancelledCallInvite: CancelledCallInvite) {
+        self.call = nil
+        self.callInvite = nil
+        self.fromDisplayName = cancelledCallInvite.from
+        self.toDisplayName =  cancelledCallInvite.to
+        self.callKitCompletionCallback = nil
+        self.userInitiatedDisconnect = false
+
+        DispatchQueue.main.async {
+            self.callStatus = "missedCall"
+            self.channel?.invokeMethod("missedCall", arguments: self.getCallResult())
         }
 
 
@@ -609,7 +679,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
         callUpdate.supportsGrouping = false
         callUpdate.supportsUngrouping = false
         callUpdate.hasVideo = false
-        
+
         callKitProvider.reportNewIncomingCall(with: uuid, update: callUpdate) { error in
             if let error = error {
                 NSLog("Failed to report incoming call successfully: \(error.localizedDescription).")
@@ -622,7 +692,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     func performEndCallAction(uuid: UUID) {
 
         if self.call == nil {
-            return;
+//            return;
         }
 
         self.call?.disconnect()
@@ -653,7 +723,40 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
 //             }
 //         }
     }
-    
+    func performMissedCallAction(uuid: UUID,cancelledCallInvite: CancelledCallInvite) {
+
+            if self.call == nil {
+    //            return;
+            }
+
+            self.call?.disconnect()
+    //         self.call = nil
+    //         self.callInvite = nil
+    //         self.result?("")
+    //         self.result = nil
+
+            self.callDisconnectedMissCall(id: uuid, error: nil,cancelledCallInvite: cancelledCallInvite)
+    //         let endCallAction = CXEndCallAction(call: uuid)
+    //         let transaction = CXTransaction(action: endCallAction)
+    //
+    //         callKitCallController.request(transaction) { error in
+    //             if error != nil {
+    //                 NSLog("Error ending call:")
+    //                 self.result?(FlutterError.init(
+    //                     code: "Error",
+    //                     message: "Error",
+    //                     details: "Error"
+    //                 ))
+    //
+    //                 self.result = nil
+    //             } else {
+    //                 self.call = nil
+    //                 self.callInvite = nil
+    //                 self.result?("")
+    //                 self.result = nil
+    //             }
+    //         }
+        }
     func performVoiceCall(uuid: UUID, completionHandler: @escaping (Bool) -> Swift.Void) {
         guard let accessToken = getAccessToken() else {
             completionHandler(false)
@@ -920,6 +1023,9 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
 //         }
         callDisconnected(id: call.uuid!, error: nil)
     }
+    public func sendDigits (digits: String) {
+            self.call?.sendDigits(digits)
+        }
 }
 
 extension UIWindow {
