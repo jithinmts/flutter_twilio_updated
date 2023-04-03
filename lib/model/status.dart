@@ -6,4 +6,5 @@ enum FlutterTwilioStatus {
   reconnecting,
   reconnected,
   unknown,
+  missedCall,
 }
