@@ -130,7 +130,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.turnScreenOnAndKeyguardOff();
 
         sharedPreferencesContactData = getApplicationContext().getSharedPreferences(TwilioConstants.SHARED_PREFERENCES_CONTACT_DATA, Context.MODE_PRIVATE);
-        handleIntent(getIntent());
+       handleIntent(getIntent());
         registerReceiver();
     }
 
@@ -180,7 +180,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                         }
                     }else
                     {
-                        String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
+                       String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
 
                         textDisplayName.setText(name);
                         if (!name.equals("") || !name.equals(callInvite2.getFrom())) {
@@ -290,7 +290,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             break;
 
             case TwilioConstants.ACTION_ACCEPT: {
-                this.callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+               this.callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
                 containerIncomingCall.setVisibility(View.GONE);
                 containerActiveCall.setVisibility(View.VISIBLE);
                 updateCallDetails();
@@ -304,7 +304,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
             break;
             case TwilioConstants.ACTION_RETURN_CALL:
-                callInvite2 = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
+                 callInvite2 = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
                 returnCall(intent,callInvite2);
                 break;
 
@@ -369,7 +369,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
         try {
             TwilioUtils.getInstance(this).acceptInvite(this.callInvite, getListener());
-        } catch (Exception exception) {
+         } catch (Exception exception) {
             exception.printStackTrace();
             this.close();
         }
@@ -497,7 +497,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         String fromDisplayName = null;
         if (this.callInvite != null) {
 
-            for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
+           for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
 
                 if (entry.getKey().equals("fromDisplayName")) {
                     fromDisplayName = entry.getValue();

@@ -19,8 +19,7 @@ class FlutterTwilioCall extends Equatable {
     required this.mute,
     required this.speaker,
     required this.status,
-    required this.outgoing,
-    required this.to,
+    required this.outgoing,required this.to,
   });
 
   factory FlutterTwilioCall.fromMap(Map<String, dynamic> data) {
@@ -37,8 +36,7 @@ class FlutterTwilioCall extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [
+  List<Object?> get props => [
         id,
         fromDisplayName,
         toDisplayName,

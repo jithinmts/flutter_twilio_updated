@@ -14,7 +14,7 @@ class FlutterTwilio {
   static const MethodChannel _channel = MethodChannel('flutter_twilio');
 
   static const MethodChannel _eventChannel =
-  MethodChannel('flutter_twilio_response');
+      MethodChannel('flutter_twilio_response');
 
   static late StreamController<FlutterTwilioEvent> _streamController;
 
@@ -137,9 +137,9 @@ class FlutterTwilio {
   }
 
   static Future<void> setContactData(
-      List<FlutterTwilioContactData> data, {
-        String defaultDisplayName = "Unknown number",
-      }) async {
+    List<FlutterTwilioContactData> data, {
+    String defaultDisplayName = "Unknown number",
+  }) async {
     final args = <String, dynamic>{};
     for (var element in data) {
       args[element.phoneNumber] = {

@@ -117,7 +117,7 @@ public class TwilioUtils {
             throw new RuntimeException("No access token");
         }
 
-        HashMap<String, String> params = new HashMap<>();
+         HashMap<String, String> params = new HashMap<>();
         params.put("To", to);
         if (data != null) {
             for (Map.Entry<String, Object> entry : data.entrySet()) {
@@ -147,7 +147,7 @@ public class TwilioUtils {
         this.fromDisplayName = fromDisplayName;
         this.toDisplayName = toDisplayName;
         this.activeCall = Voice.connect(this.context, connectOptions, getCallListener(listener));
-    }
+        }
 
     public void sendDigits(String digit) {
         if (this.activeCall != null) {
@@ -160,7 +160,7 @@ public class TwilioUtils {
     }
 
     public void acceptInvite(CallInvite callInvite, Call.Listener listener) {
-        Log.e(TAG, "onCallInvite:" + callInvite.getCallSid());
+       Log.e(TAG, "onCallInvite:" + callInvite.getCallSid());
         String from = callInvite.getFrom();
         Log.e(TAG, "tw_from:" + from);
         if (this.activeCall != null) {

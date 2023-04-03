@@ -196,7 +196,7 @@ public class NotificationUtils {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
         );
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, createChannel(context, false));
+         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, createChannel(context, false));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder.setSmallIcon(R.drawable.ic_call_end);
             builder.setContentTitle("Missed Call");

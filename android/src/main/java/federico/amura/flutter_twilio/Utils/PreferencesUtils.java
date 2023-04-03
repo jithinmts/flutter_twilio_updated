@@ -56,7 +56,7 @@ public class PreferencesUtils {
                 if (displayName == null) displayName = "";
                 String photoURL = (String) item.get("photoURL");
                 if (photoURL == null) photoURL = "";
-                editor.putString(phoneNumber, displayName + ";" + photoURL);
+                editor.putString(phoneNumber, displayName );
                 i++;
             }
             Log.i(TAG, "Saved " + i + " contacts");
