@@ -2,7 +2,7 @@
 <resources>
     <string name="notification_incoming_call_title">Incoming call</string>
     <string name="notification_incoming_call_text">From %s</string>
-    <string name="notification_missed_call_title">Missed call</string>
+    <string name="notification_missed_call_title">Missed call %s</string>
     <string name="notification_missed_call_text">From %s</string>
 
     <string name="btn_speaker">Speaker</string>
