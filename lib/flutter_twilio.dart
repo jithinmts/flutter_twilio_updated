@@ -3,7 +3,6 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'model/call.dart';
@@ -14,7 +13,8 @@ import 'model/status.dart';
 class FlutterTwilio {
   static const MethodChannel _channel = MethodChannel('flutter_twilio');
 
-  static const MethodChannel _eventChannel = MethodChannel('flutter_twilio_response');
+  static const MethodChannel _eventChannel =
+  MethodChannel('flutter_twilio_response');
 
   static late StreamController<FlutterTwilioEvent> _streamController;
 
@@ -31,11 +31,13 @@ class FlutterTwilio {
         final eventType = getEventType(event.method);
         FlutterTwilioCall? call;
         try {
-          call = FlutterTwilioCall.fromMap(Map<String, dynamic>.from(event.arguments));
+          call = FlutterTwilioCall.fromMap(
+              Map<String, dynamic>.from(event.arguments));
         } catch (error) {}
         _streamController.add(FlutterTwilioEvent(eventType, call));
       } catch (error, stack) {
-        log("Error parsing call event. ${event.arguments}", error: error, stackTrace: stack);
+        log("Error parsing call event. ${event.arguments}",
+            error: error, stackTrace: stack);
       }
     });
 
@@ -45,8 +47,10 @@ class FlutterTwilio {
   }
 
   static FlutterTwilioStatus getEventType(String event) {
+    print(event);
     if (event == "callConnecting") return FlutterTwilioStatus.connecting;
     if (event == "callDisconnected") return FlutterTwilioStatus.disconnected;
+    if (event == "missedCall") return FlutterTwilioStatus.missedCall;
     if (event == "callRinging") return FlutterTwilioStatus.ringing;
     if (event == "callConnected") return FlutterTwilioStatus.connected;
     if (event == "callReconnecting") return FlutterTwilioStatus.reconnecting;
@@ -59,7 +63,9 @@ class FlutterTwilio {
   }
 
   static Stream<FlutterTwilioEvent> get onCallConnecting {
-    return _streamController.stream.asBroadcastStream().where((event) => event.status == FlutterTwilioStatus.connecting);
+    return _streamController.stream
+        .asBroadcastStream()
+        .where((event) => event.status == FlutterTwilioStatus.connecting);
   }
 
   static Future<FlutterTwilioCall> makeCall({
@@ -77,6 +83,13 @@ class FlutterTwilio {
 
   static Future<void> hangUp() async {
     await _channel.invokeMethod('hangUp');
+  }
+
+  static Future<void> sendDigits(String digits) async {
+    final args = <String, Object>{
+      "digits": digits,
+    };
+    await _channel.invokeMethod('sendDigits', args);
   }
 
   static Future<void> register({
@@ -124,9 +137,9 @@ class FlutterTwilio {
   }
 
   static Future<void> setContactData(
-    List<FlutterTwilioContactData> data, {
-    String defaultDisplayName = "Unknown number",
-  }) async {
+      List<FlutterTwilioContactData> data, {
+        String defaultDisplayName = "Unknown number",
+      }) async {
     final args = <String, dynamic>{};
     for (var element in data) {
       args[element.phoneNumber] = {

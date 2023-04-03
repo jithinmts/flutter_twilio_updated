@@ -1,10 +1,14 @@
 package federico.amura.flutter_twilio;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
@@ -14,6 +18,7 @@ import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -26,6 +31,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -34,6 +42,7 @@ import com.squareup.picasso.Picasso;
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
+import com.twilio.voice.CancelledCallInvite;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,7 +56,7 @@ import federico.amura.flutter_twilio.Utils.TwilioUtils;
 public class BackgroundCallJavaActivity extends AppCompatActivity implements SensorEventListener {
 
     private static final String TAG = "BackgroundCallActivity";
-
+    private static final int MIC_PERMISSION_REQUEST_CODE = 17893;
     private PowerManager.WakeLock wakeLock;
     private ViewGroup container;
     private ImageView image;
@@ -63,6 +72,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private CustomBroadCastReceiver customBroadCastReceiver;
     private boolean broadcastReceiverRegistered = false;
     private CallInvite callInvite;
+    private CancelledCallInvite callInvite2;
     private boolean exited = false;
     private SensorManager sensorManager;
     private Sensor sensor;
@@ -70,11 +80,16 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private Timer timer;
     private int seconds = 0;
 
+    private SharedPreferences sharedPreferencesContactData;
+    Handler handler = new Handler();
+    Runnable runnable;
+    int delay = 1000;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_background_call);
-
+        Log.e(TAG, "******* BackgroundCallJavaActivity onCreate");
         this.container = findViewById(R.id.container);
         this.image = findViewById(R.id.image);
         this.textDisplayName = findViewById(R.id.textDisplayName);
@@ -114,6 +129,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.sensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         this.turnScreenOnAndKeyguardOff();
 
+        sharedPreferencesContactData = getApplicationContext().getSharedPreferences(TwilioConstants.SHARED_PREFERENCES_CONTACT_DATA, Context.MODE_PRIVATE);
         handleIntent(getIntent());
         registerReceiver();
     }
@@ -129,9 +145,15 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onDestroy() {
+//        if(sharedPreferencesContactData!=null) {
+//            SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
+//            editor.clear().apply();
+//        }
         super.onDestroy();
         if (wakeLock != null) {
-            wakeLock.release();
+            if (wakeLock.isHeld()) {
+                wakeLock.release();
+            }
         }
 
         this.unregisterReceiver();
@@ -140,6 +162,37 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onResume() {
+
+        handler.postDelayed(runnable = new Runnable() {
+            public void run() {
+                handler.postDelayed(runnable, delay);
+                try {
+
+                    if(callInvite!=null){
+                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!");
+                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!!" + sharedPreferencesContactData.getString(callInvite.getFrom(), "") + "!");
+                        String name = sharedPreferencesContactData.getString(callInvite.getFrom(), "");
+
+                        textDisplayName.setText(name);
+                        if (!name.equals("") || !name.equals(callInvite.getFrom())) {
+
+                            handler.removeCallbacks(runnable);
+                        }
+                    }else
+                    {
+                        String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
+
+                        textDisplayName.setText(name);
+                        if (!name.equals("") || !name.equals(callInvite2.getFrom())) {
+
+                            handler.removeCallbacks(runnable);
+                        }
+                    }
+                }catch (Exception e){
+                    Log.d(TAG, e.toString());
+                }
+            }
+        }, delay);
         super.onResume();
         this.sensorManager.registerListener(this, this.sensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
@@ -241,14 +294,19 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 containerIncomingCall.setVisibility(View.GONE);
                 containerActiveCall.setVisibility(View.VISIBLE);
                 updateCallDetails();
-                this.acceptCall();
+                this.checkPermissionsAndAccept();
             }
             break;
 
             case TwilioConstants.ACTION_CANCEL_CALL: {
                 onCallCanceled();
             }
+
             break;
+            case TwilioConstants.ACTION_RETURN_CALL:
+                callInvite2 = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
+                returnCall(intent,callInvite2);
+                break;
 
         }
     }
@@ -269,7 +327,35 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         intent.setAction(TwilioConstants.ACTION_STOP_SERVICE);
         startService(intent);
     }
+    private void checkPermissionsAndAccept(){
+        Log.d(TAG, "Clicked accept");
+        if (!checkPermissionForMicrophone()) {
+            Log.d(TAG, "configCallUI-requestAudioPermissions");
+            requestAudioPermissions();
+        } else {
+            Log.d(TAG, "configCallUI-newAnswerCallClickListener");
+            acceptCall();
+        }
+    }
+    private Boolean checkPermissionForMicrophone() {
+        int resultMic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
+        return resultMic == PackageManager.PERMISSION_GRANTED;
+    }
 
+    private void requestAudioPermissions() {
+        String[] permissions = {Manifest.permission.RECORD_AUDIO};
+        Log.d(TAG, "requestAudioPermissions");
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
+                ActivityCompat.requestPermissions(this, permissions, MIC_PERMISSION_REQUEST_CODE);
+            } else {
+                ActivityCompat.requestPermissions(this, permissions, MIC_PERMISSION_REQUEST_CODE);
+            }
+        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "requestAudioPermissions-> permission granted->newAnswerCallClickListener");
+            acceptCall();
+        }
+    }
     private void acceptCall() {
         stopServiceIncomingCall();
 
@@ -278,7 +364,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             this.close();
             return;
         }
-
         this.containerActiveCall.setVisibility(View.VISIBLE);
         this.containerIncomingCall.setVisibility(View.GONE);
 
@@ -340,6 +425,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void toggleSpeaker() {
+
         try {
             boolean speaker = TwilioUtils.getInstance(this).toggleSpeaker();
             applyColorToButton(this.btnSpeaker, speaker);
@@ -380,10 +466,12 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private void updateCallDetails() {
         HashMap<String, Object> call = TwilioUtils.getInstance(this).getCallDetails();
 
+
         String status = (String) call.get("status");
         if (status != null && !status.trim().equals("")) {
             switch (status) {
                 case "callRinging": {
+                    Log.e("*Twilio*", "...........callRinging.........");
                     this.textCallStatus.setVisibility(View.VISIBLE);
                     textCallStatus.setText(R.string.call_status_ringing);
                 }
@@ -408,27 +496,82 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         // Display name
         String fromDisplayName = null;
         if (this.callInvite != null) {
+
             for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
+
                 if (entry.getKey().equals("fromDisplayName")) {
                     fromDisplayName = entry.getValue();
                 }
             }
 
             if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
+                Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
                 final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite.getFrom());
                 if (contactName != null && !contactName.trim().isEmpty()) {
                     fromDisplayName = contactName;
                 } else {
-                    fromDisplayName = "Unknown name";
+                    fromDisplayName = this.callInvite.getFrom();
+                }
+            }
+        }else if (this.callInvite2 != null) {
+
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case.........");
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case"+callInvite2.getFrom());
+            for (Map.Entry<String, String> entry : callInvite2.getCustomParameters().entrySet()) {
+                Log.e("*Twilio*", "entry.getKey() "+entry.getKey());
+
+                if (entry.getKey().equals("fromDisplayName")) {
+                    fromDisplayName = entry.getValue();
+                }
+            }
+
+            if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
+                Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
+                final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite2.getFrom());
+                if (contactName != null && !contactName.trim().isEmpty()) {
+                    fromDisplayName = contactName;
+                } else {
+                    fromDisplayName = this.callInvite2.getFrom();
                 }
             }
         } else {
             fromDisplayName = "Unknown name";
         }
-        this.textDisplayName.setText(fromDisplayName);
 
-        // Phone number
-        this.textPhoneNumber.setText("");
+        if(callInvite!=null){
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case1111111");
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getTo());
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getFrom());
+            Log.e("*Twilio*", "fromDisplayName !" + fromDisplayName + "!");
+            Log.e("*Twilio*", "sharedPreferencesContactData !");
+            Log.e("*Twilio*", "sharedPreferencesContactData !" +
+                    this.sharedPreferencesContactData.getString(callInvite.getFrom(), "") + "!");
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getCustomParameters().entrySet());
+
+            if (fromDisplayName.equals("Unknown number"))
+                fromDisplayName = callInvite.getFrom();
+            this.textDisplayName.setText(fromDisplayName);
+
+            // Phone number
+            this.textPhoneNumber.setText("");
+        }else{
+
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case1111111");
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getTo());
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getFrom());
+            Log.e("*Twilio*", "fromDisplayName !" + fromDisplayName + "!");
+            Log.e("*Twilio*", "sharedPreferencesContactData !!");
+            Log.e("*Twilio*", "sharedPreferencesContactData !!!" +
+                    this.sharedPreferencesContactData.getString(callInvite2.getFrom(), "") + "!");
+            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getCustomParameters().entrySet());
+
+            if (fromDisplayName.equals("Unknown number"))
+                fromDisplayName = callInvite2.getFrom();
+            this.textDisplayName.setText(fromDisplayName);
+
+            // Phone number
+            this.textPhoneNumber.setText("");
+        }
 //        String phoneNumber;
 //        if (from != null && !from.trim().equals("")) {
 //            phoneNumber = from;
@@ -475,12 +618,14 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
         this.stopTimer();
         this.exited = true;
+        handler.removeCallbacks(runnable);
         this.finish();
     }
 
     @Override
     public void finish() {
         this.stopTimer();
+        handler.removeCallbacks(runnable);
         super.finish();
     }
 
@@ -576,6 +721,33 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             if (TwilioConstants.ACTION_REJECT.equals(action)) {
                 activity.onCallCanceled();
             }
+        }
+    }
+    private void returnCall(Intent intent, CancelledCallInvite callInvite) {
+//        stopForeground(true);
+        Log.i(TAG, "returning call!!!!");
+        Log.e(TAG, "*******************************************19");
+
+        Map<String, Object> data  = new HashMap<String, Object>();
+        data.put("To", callInvite.getFrom());
+        data.put("From", callInvite.getTo().replace("client:", ""));
+        data.put("CallerID", callInvite.getTo().replace("client:", ""));
+        this.containerActiveCall.setVisibility(View.VISIBLE);
+        this.containerIncomingCall.setVisibility(View.GONE);
+
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        Log.e(TAG, "*******************************************3");
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        Log.e(TAG, "*******************************************4");
+        notificationManager.cancel(100);
+        try {
+            Log.e(TAG, "*******************************************122"+callInvite.getTo().replace("client:", ""));
+            TwilioUtils.getInstance(this).makeCall(callInvite.getFrom(),data, getListener());
+            Log.e(TAG, "*******************************************222"+callInvite.getFrom());
+        } catch (Exception exception) {
+            Log.e(TAG, "*******************************************212");
+            exception.printStackTrace();
+            this.close();
         }
     }
 }

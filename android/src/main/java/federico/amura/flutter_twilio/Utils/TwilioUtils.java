@@ -7,6 +7,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import android.media.AudioDeviceInfo;
+
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
@@ -15,6 +17,10 @@ import com.twilio.voice.RegistrationException;
 import com.twilio.voice.RegistrationListener;
 import com.twilio.voice.UnregistrationListener;
 import com.twilio.voice.Voice;
+
+import android.os.Build;
+
+import java.util.List;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -143,11 +149,23 @@ public class TwilioUtils {
         this.activeCall = Voice.connect(this.context, connectOptions, getCallListener(listener));
     }
 
+    public void sendDigits(String digit) {
+        if (this.activeCall != null) {
+            Log.i(TAG, "sending digit: " + digit);
+            this.activeCall.sendDigits(digit);
+            Log.i(TAG, "digit sent: ");
+        } else {
+            Log.i(TAG, "Error sending digits, no active call");
+        }
+    }
+
     public void acceptInvite(CallInvite callInvite, Call.Listener listener) {
+        Log.e(TAG, "onCallInvite:" + callInvite.getCallSid());
+        String from = callInvite.getFrom();
+        Log.e(TAG, "tw_from:" + from);
         if (this.activeCall != null) {
             throw new RuntimeException("There is a call in progress");
         }
-
         if (callInvite == null) {
             throw new RuntimeException("No call invite");
         }
@@ -207,11 +225,27 @@ public class TwilioUtils {
         if (this.activeCall == null) {
             throw new RuntimeException("No active call");
         }
-
         AudioManager audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
         boolean isSpeaker = !audioManager.isSpeakerphoneOn();
-        audioManager.setSpeakerphoneOn(isSpeaker);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!isSpeaker)
+                setCommunicationDevice(this.context, AudioDeviceInfo.TYPE_BUILTIN_EARPIECE);
+            else
+                setCommunicationDevice(this.context, AudioDeviceInfo.TYPE_BUILTIN_SPEAKER);
+        } else
+            audioManager.setSpeakerphoneOn(isSpeaker);
         return isSpeaker;
+    }
+
+    public void setCommunicationDevice(Context context, Integer targetDeviceType) {
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+        for (AudioDeviceInfo device : devices) {
+            if (device.getType() == targetDeviceType) {
+                boolean result = audioManager.setCommunicationDevice(device);
+                Log.d("result: ", "" + result);
+            }
+        }
     }
 
     public void setSpeaker(boolean speaker) {

@@ -40,9 +40,9 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
      */
     @Override
     public void onMessageReceived(final RemoteMessage remoteMessage) {
-        Log.d(TAG, "Received onMessageReceived()");
-        Log.d(TAG, "Bundle data: " + remoteMessage.getData());
-        Log.d(TAG, "From: " + remoteMessage.getFrom());
+        Log.e(TAG, "Received onMessageReceived()");
+        Log.e(TAG, "Bundle data: " + remoteMessage.getData());
+        Log.e(TAG, "From: " + remoteMessage.getFrom());
         // If application is running in the foreground use local broadcast to handle message.
         // Otherwise use the background isolate to handle message.
 
@@ -50,11 +50,14 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
             boolean valid = Voice.handleMessage(this, remoteMessage.getData(), new MessageListener() {
                 @Override
                 public void onCallInvite(@NonNull CallInvite callInvite) {
+                    String from=callInvite.getFrom();
+                    final int notificationId = (int) System.currentTimeMillis();
                     handleInvite(callInvite);
                 }
 
                 @Override
                 public void onCancelledCallInvite(@NonNull CancelledCallInvite cancelledCallInvite, @Nullable CallException callException) {
+                    Log.e("********Twilio ", "onCancelledCallInvite");
                     handleCanceledCallInvite(cancelledCallInvite);
                 }
             });
@@ -72,11 +75,17 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void handleInvite(CallInvite callInvite) {
-        Intent intent = new Intent(this, IncomingCallNotificationService.class);
-        intent.setAction(TwilioConstants.ACTION_INCOMING_CALL);
-        intent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
+        try{
+            Intent intent = new Intent(this, IncomingCallNotificationService.class);
+            intent.setAction(TwilioConstants.ACTION_INCOMING_CALL);
+            intent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
 
-        startService(intent);
+            Log.d("Twilio getCallSid 1", callInvite.getCallSid());
+            startService(intent);
+        }catch (Exception e){
+            Log.e("***Twilio exception ", e.toString());
+        }
+
     }
 
     private void handleCanceledCallInvite(CancelledCallInvite cancelledCallInvite) {

@@ -29,6 +29,8 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
+import io.flutter.embedding.android.FlutterActivity;
+import io.flutter.embedding.engine.FlutterEngine;
 
 public class FlutterTwilioPlugin implements
         FlutterPlugin,
@@ -97,7 +99,7 @@ public class FlutterTwilioPlugin implements
     @Override
     public void onDetachedFromActivity() {
         Log.d(TAG, "onDetachedFromActivity");
-        this.unregisterReceiver();
+//        this.unregisterReceiver();
     }
 
     @Override
@@ -116,9 +118,11 @@ public class FlutterTwilioPlugin implements
                 CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
                 answer(callInvite);
             }
+            if (TwilioConstants.ACTION_MISSED_CALL.equals(action)) {
+                responseChannel.invokeMethod("missedCall", "");
+            }
         }
     }
-
     @Override
     public void onMethodCall(MethodCall call, @NonNull Result result) {
         Log.i(TAG, "onMethodCall. Method: " + call.method);
@@ -201,7 +205,20 @@ public class FlutterTwilioPlugin implements
                 try {
                     boolean isSpeaker = twilioUtils.toggleSpeaker();
                     responseChannel.invokeMethod(twilioUtils.getCallStatus(), twilioUtils.getCallDetails());
+
                     result.success(isSpeaker);
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                    result.error("", "", "");
+                }
+            }
+            break;
+
+            case "sendDigits": {
+                try {
+                    String digits = call.argument("digits");
+                    twilioUtils.sendDigits(digits);
+                    result.success("");
                 } catch (Exception exception) {
                     exception.printStackTrace();
                     result.error("", "", "");
@@ -346,9 +363,11 @@ public class FlutterTwilioPlugin implements
 
     private void answer(CallInvite callInvite) {
         try {
+            Log.d(TAG, "answer CALL: ");
             TwilioUtils t = TwilioUtils.getInstance(this.context);
             t.acceptInvite(callInvite, getCallListener());
             responseChannel.invokeMethod("callConnecting", t.getCallDetails());
+            Log.d(TAG, "answer CALL: ");
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -426,5 +445,3 @@ public class FlutterTwilioPlugin implements
 
 
 }
-
-
