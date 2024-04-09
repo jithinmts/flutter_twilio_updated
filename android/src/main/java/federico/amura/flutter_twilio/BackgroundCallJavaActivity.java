@@ -88,8 +88,9 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Set the content view to the call activity layout.
         setContentView(R.layout.activity_background_call);
-        Log.e(TAG, "******* BackgroundCallJavaActivity onCreate");
+        // Initialize UI elements from layout.
         this.container = findViewById(R.id.container);
         this.image = findViewById(R.id.image);
         this.textDisplayName = findViewById(R.id.textDisplayName);
@@ -121,16 +122,23 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.containerIncomingCall = findViewById(R.id.containerIncomingCall);
         this.containerIncomingCall.setVisibility(View.GONE);
 
+        // Apply saved color preferences to UI elements.
         applyColors();
         applyColorToButton(this.btnSpeaker, false);
         applyColorToButton(this.btnMute, false);
 
+        // Set up proximity sensor to manage screen wake state.
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         this.sensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         this.turnScreenOnAndKeyguardOff();
 
+        // Load shared preferences for contact data.
         sharedPreferencesContactData = getApplicationContext().getSharedPreferences(TwilioConstants.SHARED_PREFERENCES_CONTACT_DATA, Context.MODE_PRIVATE);
-       handleIntent(getIntent());
+
+        // Handle any intent that started the activity, such as an incoming call.
+        handleIntent(getIntent());
+
+        // Register broadcast receiver to listen for call-related actions.
         registerReceiver();
     }
 
@@ -145,10 +153,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onDestroy() {
-//        if(sharedPreferencesContactData!=null) {
-//            SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
-//            editor.clear().apply();
-//        }
         super.onDestroy();
         if (wakeLock != null) {
             if (wakeLock.isHeld()) {
@@ -168,9 +172,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 handler.postDelayed(runnable, delay);
                 try {
 
-                    if(callInvite!=null){
-                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!");
-                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!!" + sharedPreferencesContactData.getString(callInvite.getFrom(), "") + "!");
+                    if (callInvite != null) {
                         String name = sharedPreferencesContactData.getString(callInvite.getFrom(), "");
 
                         textDisplayName.setText(name);
@@ -178,9 +180,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
                             handler.removeCallbacks(runnable);
                         }
-                    }else
-                    {
-                       String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
+                    } else {
+                        String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
 
                         textDisplayName.setText(name);
                         if (!name.equals("") || !name.equals(callInvite2.getFrom())) {
@@ -188,7 +189,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                             handler.removeCallbacks(runnable);
                         }
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
                     Log.d(TAG, e.toString());
                 }
             }
@@ -236,7 +237,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
 
         KeyguardManager kgm = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
-        Log.d(TAG, "isKeyguardUp $isKeyguardUp");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             kgm.requestDismissKeyguard(this, null);
         }
@@ -290,7 +290,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             break;
 
             case TwilioConstants.ACTION_ACCEPT: {
-               this.callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+                this.callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
                 containerIncomingCall.setVisibility(View.GONE);
                 containerActiveCall.setVisibility(View.VISIBLE);
                 updateCallDetails();
@@ -304,14 +304,15 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
             break;
             case TwilioConstants.ACTION_RETURN_CALL:
-                 callInvite2 = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
-                returnCall(intent,callInvite2);
+                callInvite2 = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
+                returnCall(intent, callInvite2);
                 break;
 
         }
     }
 
 
+    // Handles new intents received by the activity, such as ACTION_CANCEL_CALL.
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -322,21 +323,21 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
     }
 
+    // Stops the incoming call service and removes the notification
     private void stopServiceIncomingCall() {
         Intent intent = new Intent(this, IncomingCallNotificationService.class);
         intent.setAction(TwilioConstants.ACTION_STOP_SERVICE);
         startService(intent);
     }
-    private void checkPermissionsAndAccept(){
-        Log.d(TAG, "Clicked accept");
+
+    private void checkPermissionsAndAccept() {
         if (!checkPermissionForMicrophone()) {
-            Log.d(TAG, "configCallUI-requestAudioPermissions");
             requestAudioPermissions();
         } else {
-            Log.d(TAG, "configCallUI-newAnswerCallClickListener");
             acceptCall();
         }
     }
+
     private Boolean checkPermissionForMicrophone() {
         int resultMic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
         return resultMic == PackageManager.PERMISSION_GRANTED;
@@ -344,7 +345,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void requestAudioPermissions() {
         String[] permissions = {Manifest.permission.RECORD_AUDIO};
-        Log.d(TAG, "requestAudioPermissions");
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
                 ActivityCompat.requestPermissions(this, permissions, MIC_PERMISSION_REQUEST_CODE);
@@ -352,38 +352,34 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 ActivityCompat.requestPermissions(this, permissions, MIC_PERMISSION_REQUEST_CODE);
             }
         } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "requestAudioPermissions-> permission granted->newAnswerCallClickListener");
             acceptCall();
         }
     }
+
+    // Accepts the call
     private void acceptCall() {
         stopServiceIncomingCall();
-
         if (this.callInvite == null) {
-            Log.i(TAG, "No call invite");
             this.close();
             return;
         }
         this.containerActiveCall.setVisibility(View.VISIBLE);
         this.containerIncomingCall.setVisibility(View.GONE);
-
         try {
             TwilioUtils.getInstance(this).acceptInvite(this.callInvite, getListener());
-         } catch (Exception exception) {
+        } catch (Exception exception) {
             exception.printStackTrace();
             this.close();
         }
     }
 
+    // Rejects the call invite
     private void rejectCall() {
         stopServiceIncomingCall();
-
         if (this.callInvite == null) {
-            Log.i(TAG, "No call invite");
             this.close();
             return;
         }
-
         try {
             this.callInvite.reject(this);
         } catch (Exception exception) {
@@ -393,7 +389,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.close();
     }
 
-
+    // Handles a cancelled call
     private void hangUp() {
         try {
             TwilioUtils.getInstance(this).disconnect();
@@ -434,11 +430,11 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
     }
 
+    // Applies saved color preferences to UI elements like buttons and text views.
     private void applyColors() {
         final PreferencesUtils preferencesUtils = PreferencesUtils.getInstance(this);
         final int backgroundColor = preferencesUtils.getCallBackgroundColor();
         this.container.setBackgroundColor(backgroundColor);
-
         final int textColor = preferencesUtils.getCallTextColor();
         this.textDisplayName.setTextColor(textColor);
         this.textPhoneNumber.setTextColor(textColor);
@@ -446,6 +442,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.textTimer.setTextColor(textColor);
     }
 
+    // Applies colors to buttons based on their state.
     private void applyColorToButton(ImageView view, boolean fill) {
         final PreferencesUtils preferencesUtils = PreferencesUtils.getInstance(this);
         int backgroundColor;
@@ -463,6 +460,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         ImageViewCompat.setImageTintList(view, ColorStateList.valueOf(iconColor));
     }
 
+
+    // Updates the call UI details such as the display name, phone number, and call status.
     private void updateCallDetails() {
         HashMap<String, Object> call = TwilioUtils.getInstance(this).getCallDetails();
 
@@ -471,7 +470,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         if (status != null && !status.trim().equals("")) {
             switch (status) {
                 case "callRinging": {
-                    Log.e("*Twilio*", "...........callRinging.........");
                     this.textCallStatus.setVisibility(View.VISIBLE);
                     textCallStatus.setText(R.string.call_status_ringing);
                 }
@@ -497,7 +495,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         String fromDisplayName = null;
         if (this.callInvite != null) {
 
-           for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
+            for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
 
                 if (entry.getKey().equals("fromDisplayName")) {
                     fromDisplayName = entry.getValue();
@@ -505,7 +503,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             }
 
             if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
-                Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
                 final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite.getFrom());
                 if (contactName != null && !contactName.trim().isEmpty()) {
                     fromDisplayName = contactName;
@@ -513,20 +510,14 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                     fromDisplayName = this.callInvite.getFrom();
                 }
             }
-        }else if (this.callInvite2 != null) {
-
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case.........");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case"+callInvite2.getFrom());
+        } else if (this.callInvite2 != null) {
             for (Map.Entry<String, String> entry : callInvite2.getCustomParameters().entrySet()) {
-                Log.e("*Twilio*", "entry.getKey() "+entry.getKey());
-
                 if (entry.getKey().equals("fromDisplayName")) {
                     fromDisplayName = entry.getValue();
                 }
             }
 
             if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
-                Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
                 final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite2.getFrom());
                 if (contactName != null && !contactName.trim().isEmpty()) {
                     fromDisplayName = contactName;
@@ -538,33 +529,14 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             fromDisplayName = "Unknown name";
         }
 
-        if(callInvite!=null){
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case1111111");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getTo());
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getFrom());
-            Log.e("*Twilio*", "fromDisplayName !" + fromDisplayName + "!");
-            Log.e("*Twilio*", "sharedPreferencesContactData !");
-            Log.e("*Twilio*", "sharedPreferencesContactData !" +
-                    this.sharedPreferencesContactData.getString(callInvite.getFrom(), "") + "!");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getCustomParameters().entrySet());
-
+        if (callInvite != null) {
             if (fromDisplayName.equals("Unknown number"))
                 fromDisplayName = callInvite.getFrom();
             this.textDisplayName.setText(fromDisplayName);
 
             // Phone number
             this.textPhoneNumber.setText("");
-        }else{
-
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case1111111");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getTo());
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getFrom());
-            Log.e("*Twilio*", "fromDisplayName !" + fromDisplayName + "!");
-            Log.e("*Twilio*", "sharedPreferencesContactData !!");
-            Log.e("*Twilio*", "sharedPreferencesContactData !!!" +
-                    this.sharedPreferencesContactData.getString(callInvite2.getFrom(), "") + "!");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getCustomParameters().entrySet());
-
+        } else {
             if (fromDisplayName.equals("Unknown number"))
                 fromDisplayName = callInvite2.getFrom();
             this.textDisplayName.setText(fromDisplayName);
@@ -572,34 +544,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             // Phone number
             this.textPhoneNumber.setText("");
         }
-//        String phoneNumber;
-//        if (from != null && !from.trim().equals("")) {
-//            phoneNumber = from;
-//        } else {
-//            phoneNumber = (String) call.get("to");
-//        }
-//
-//        if (phoneNumber != null && !phoneNumber.trim().equals("")) {
-//            this.textPhoneNumber.setText(phoneNumber);
-//        } else {
-//            this.textPhoneNumber.setText("");
-//        }
 
         // Image
         Picasso.get().load("https://stonegatesl.com/wp-content/uploads/2021/01/avatar-300x300.jpg").into(this.image);
 
-//        String imageURL = null;
-//        if (from != null && !from.trim().equals("")) {
-//            imageURL = PreferencesUtils.getInstance(this).findPhotoURL(from);
-//        } else {
-//            imageURL = (String) call.get("toPhotoURL");
-//        }
-
-//        if (imageURL != null && !imageURL.trim().equals("")) {
-//            Picasso.get().load(imageURL).into(this.image);
-//        } else {
-//            Picasso.get().load("https://stonegatesl.com/wp-content/uploads/2021/01/avatar-300x300.jpg").into(this.image);
-//        }
 
         // Timer
         if (status != null && status.equals("callConnected")) {
@@ -663,6 +611,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
 
+    // Returns a listener for call events.
     Call.Listener getListener() {
         return new Call.Listener() {
             @Override
@@ -700,6 +649,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
 
+    // Broadcast receiver to handle call action broadcasts.
     private static class CustomBroadCastReceiver extends BroadcastReceiver {
 
         private final BackgroundCallJavaActivity activity;
@@ -711,8 +661,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            Log.d(TAG, "Received broadcast for action " + action);
-
             if (action == null) return;
             if (TwilioConstants.ACTION_CANCEL_CALL.equals(action)) {
                 activity.onCallCanceled();
@@ -723,12 +671,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             }
         }
     }
-    private void returnCall(Intent intent, CancelledCallInvite callInvite) {
-//        stopForeground(true);
-        Log.i(TAG, "returning call!!!!");
-        Log.e(TAG, "*******************************************19");
 
-        Map<String, Object> data  = new HashMap<String, Object>();
+    // Handles returning to a call after a cancelled call invite.
+    private void returnCall(Intent intent, CancelledCallInvite callInvite) {
+        Map<String, Object> data = new HashMap<String, Object>();
         data.put("To", callInvite.getFrom());
         data.put("From", callInvite.getTo().replace("client:", ""));
         data.put("CallerID", callInvite.getTo().replace("client:", ""));
@@ -736,16 +682,11 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.containerIncomingCall.setVisibility(View.GONE);
 
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
-        Log.e(TAG, "*******************************************3");
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-        Log.e(TAG, "*******************************************4");
         notificationManager.cancel(100);
         try {
-            Log.e(TAG, "*******************************************122"+callInvite.getTo().replace("client:", ""));
-            TwilioUtils.getInstance(this).makeCall(callInvite.getFrom(),data, getListener());
-            Log.e(TAG, "*******************************************222"+callInvite.getFrom());
+            TwilioUtils.getInstance(this).makeCall(callInvite.getFrom(), data, getListener());
         } catch (Exception exception) {
-            Log.e(TAG, "*******************************************212");
             exception.printStackTrace();
             this.close();
         }

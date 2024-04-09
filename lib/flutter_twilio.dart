@@ -26,7 +26,6 @@ class FlutterTwilio {
     _streamController = StreamController.broadcast();
     _eventChannel.setMethodCallHandler((event) async {
       log("Call event: ${event.method} . Arguments: ${event.arguments}");
-
       try {
         final eventType = getEventType(event.method);
         FlutterTwilioCall? call;

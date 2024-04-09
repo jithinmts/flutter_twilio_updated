@@ -45,89 +45,89 @@ public class FlutterTwilioPlugin implements
     private CustomBroadcastReceiver broadcastReceiver;
     private boolean broadcastReceiverRegistered = false;
 
-    public FlutterTwilioPlugin() {
-    }
-
     private void setupMethodChannel(BinaryMessenger messenger, Context context) {
         this.context = context;
+        // Channel for receiving method calls from Dart.
         MethodChannel channel = new MethodChannel(messenger, "flutter_twilio");
         channel.setMethodCallHandler(this);
+        // Separate channel for sending call responses back to Dart.
         this.responseChannel = new MethodChannel(messenger, "flutter_twilio_response");
     }
 
+    // Registers the broadcast receiver to listen for specific call actions.
     private void registerReceiver() {
         if (!this.broadcastReceiverRegistered) {
             this.broadcastReceiverRegistered = true;
-
-            Log.i(TAG, "Registered broadcast");
             this.broadcastReceiver = new CustomBroadcastReceiver(this);
+            // Filter for accepting calls.
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(TwilioConstants.ACTION_ACCEPT);
             LocalBroadcastManager.getInstance(this.context).registerReceiver(this.broadcastReceiver, intentFilter);
         }
     }
 
+    // Unregisters the broadcast receiver.
     private void unregisterReceiver() {
         if (this.broadcastReceiverRegistered) {
             this.broadcastReceiverRegistered = false;
-
-            Log.i(TAG, "Unregistered broadcast");
             LocalBroadcastManager.getInstance(this.context).unregisterReceiver(this.broadcastReceiver);
         }
     }
 
+    // Lifecycle callback when plugin is attached to an activity.
     @Override
     public void onAttachedToActivity(ActivityPluginBinding activityPluginBinding) {
-        Log.d(TAG, "onAttachedToActivity");
         activityPluginBinding.addOnNewIntentListener(this);
         this.registerReceiver();
     }
 
+    // Lifecycle callback for configuration changes when the plugin is detached from an activity.
     @Override
     public void onDetachedFromActivityForConfigChanges() {
-        Log.d(TAG, "onDetachedFromActivityForConfigChanges");
         this.unregisterReceiver();
     }
 
+    // Lifecycle callback when the plugin is reattached to an activity after configuration changes.
     @Override
     public void onReattachedToActivityForConfigChanges(ActivityPluginBinding activityPluginBinding) {
-        Log.d(TAG, "onReattachedToActivityForConfigChanges");
         activityPluginBinding.addOnNewIntentListener(this);
         this.registerReceiver();
     }
 
+    // Lifecycle callback when the plugin is detached from an activity.
     @Override
     public void onDetachedFromActivity() {
-        Log.d(TAG, "onDetachedFromActivity");
-//        this.unregisterReceiver();
+        this.unregisterReceiver();
     }
 
+    // Handles new intents, specifically for incoming call actions.
     @Override
     public boolean onNewIntent(Intent intent) {
-        Log.d(TAG, "onNewIntent");
         this.handleIncomingCallIntent(intent);
         return false;
     }
 
+    // Handles the intent received for incoming calls, answering or notifying about missed calls.
     private void handleIncomingCallIntent(Intent intent) {
         if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();
-            Log.i(TAG, "onReceive. Action: " + action);
-
             if (TwilioConstants.ACTION_ACCEPT.equals(action)) {
+                // Extract the call invite from the intent and answer the call.
                 CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
                 answer(callInvite);
             }
             if (TwilioConstants.ACTION_MISSED_CALL.equals(action)) {
+                // Notify the Dart side about the missed call.
                 responseChannel.invokeMethod("missedCall", "");
             }
         }
     }
     @Override
     public void onMethodCall(MethodCall call, @NonNull Result result) {
-        Log.i(TAG, "onMethodCall. Method: " + call.method);
+        // Instance of TwilioUtils for making calls and managing Twilio features.
         TwilioUtils twilioUtils = TwilioUtils.getInstance(this.context);
 
+        // Switch between different method calls from Dart, such as registering, making calls, and handling call features.
         switch (call.method) {
             case "register": {
                 String identity = call.argument("identity");
@@ -351,7 +351,7 @@ public class FlutterTwilioPlugin implements
             break;
         }
     }
-
+    // Callbacks for attaching and detaching the plugin from the Flutter engine.
     @Override
     public void onAttachedToEngine(FlutterPlugin.FlutterPluginBinding binding) {
         setupMethodChannel(binding.getBinaryMessenger(), binding.getApplicationContext());
@@ -361,49 +361,45 @@ public class FlutterTwilioPlugin implements
     public void onDetachedFromEngine(@NonNull FlutterPlugin.FlutterPluginBinding binding) {
     }
 
+    // Answer an incoming call.
     private void answer(CallInvite callInvite) {
         try {
-            Log.d(TAG, "answer CALL: ");
             TwilioUtils t = TwilioUtils.getInstance(this.context);
             t.acceptInvite(callInvite, getCallListener());
             responseChannel.invokeMethod("callConnecting", t.getCallDetails());
-            Log.d(TAG, "answer CALL: ");
         } catch (Exception exception) {
             exception.printStackTrace();
         }
     }
 
+
+    // Returns a listener for Twilio call events
     Call.Listener getCallListener() {
         TwilioUtils t = TwilioUtils.getInstance(this.context);
 
         return new Call.Listener() {
             @Override
             public void onConnectFailure(@NonNull Call call, @NonNull CallException error) {
-                Log.d(TAG, "onConnectFailure. Error: " + error.getMessage());
                 responseChannel.invokeMethod("callDisconnected", "");
             }
 
             @Override
             public void onRinging(@NonNull Call call) {
-                Log.d(TAG, "onRinging");
                 responseChannel.invokeMethod("callRinging", t.getCallDetails());
             }
 
             @Override
             public void onConnected(@NonNull Call call) {
-                Log.d(TAG, "onConnected");
                 responseChannel.invokeMethod("callConnected", t.getCallDetails());
             }
 
             @Override
             public void onReconnecting(@NonNull Call call, @NonNull CallException e) {
-                Log.d(TAG, "onReconnecting. Error: " + e.getMessage());
                 responseChannel.invokeMethod("callReconnecting", t.getCallDetails());
             }
 
             @Override
             public void onReconnected(@NonNull Call call) {
-                Log.d(TAG, "onReconnected");
                 responseChannel.invokeMethod("callReconnected", t.getCallDetails());
             }
 
@@ -414,7 +410,6 @@ public class FlutterTwilioPlugin implements
                 } else {
                     Log.d(TAG, "onDisconnected");
                 }
-                Log.d(TAG, call.getState().toString());
                 responseChannel.invokeMethod("callDisconnected", null);
             }
 
@@ -424,7 +419,6 @@ public class FlutterTwilioPlugin implements
                     @NonNull Set<Call.CallQualityWarning> currentWarnings,
                     @NonNull Set<Call.CallQualityWarning> previousWarnings
             ) {
-                Log.d(TAG, "onCallQualityWarningsChanged");
             }
         };
     }
@@ -442,6 +436,4 @@ public class FlutterTwilioPlugin implements
             plugin.handleIncomingCallIntent(intent);
         }
     }
-
-
 }
