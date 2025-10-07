@@ -4,24 +4,22 @@ version '1.0-SNAPSHOT'
 buildscript {
     ext.kotlin_version = '1.8.20'
     ext.versions = [
-            'java'              : JavaVersion.VERSION_1_8,
-            'voiceAndroid'      : '6.3.0',
-            'audioSwitch'       : '1.1.2',
-            'firebaseMessaging' : '23.0.0'
+            java              : JavaVersion.VERSION_1_8,
+            voiceAndroid      : '6.3.0',
+            audioSwitch       : '1.1.2',
+            firebaseMessaging : '23.0.0'
     ]
     repositories {
         google()
         mavenCentral()
     }
-
     dependencies {
         classpath 'com.android.tools.build:gradle:8.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
-
 }
 
-rootProject.allprojects {
+allprojects {
     repositories {
         google()
         mavenCentral()
@@ -32,43 +30,50 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 36
-    //ToDoAdded
+    compileSdk = 36
+
     if (project.android.hasProperty("namespace")) {
-        namespace 'federico.amura.flutter_twilio'
+        namespace = 'federico.amura.flutter_twilio'
     }
+
     defaultConfig {
-        minSdkVersion 23
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        minSdk = 23
+        targetSdk = 36
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
-        sourceCompatibility versions.java
-        targetCompatibility versions.java
+        sourceCompatibility = versions.java
+        targetCompatibility = versions.java
     }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
-    lintOptions {
+    lint {
         disable 'InvalidPackage'
     }
 
-    // Split native libraries per ABI to reduce size and fix 16 KB limit
+    // BuildConfig explicit (silences deprecated warning)
+    buildFeatures {
+        buildConfig = true
+    }
+
+    // Split native libraries per ABI to fix 16 KB .so limit
     splits {
         abi {
-            enable true
+            enable = true
             reset()
             include 'armeabi-v7a', 'arm64-v8a'
-            universalApk false
+            universalApk = false
         }
     }
 
     // Optional: pick first if duplicate .so files exist
-    packagingOptions {
+    packaging {
         jniLibs {
-            pickFirst '**/*.so'
+            pickFirsts += ['**/*.so']
         }
     }
 }
