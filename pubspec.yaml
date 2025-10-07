@@ -5,8 +5,8 @@ repository: "https://github.com/fedeamura/flutter_twilio"
 homepage: "https://github.com/fedeamura/flutter_twilio"
 
 environment:
-  sdk: ">=2.15.1 <3.0.0"
-  flutter: ">=1.10.0"
+  sdk: ">=2.18.0 <4.0.0"
+  flutter: ">=2.10.0"
 
 dependencies:
   flutter:
