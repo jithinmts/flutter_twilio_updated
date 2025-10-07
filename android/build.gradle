@@ -2,13 +2,20 @@ group 'federico.amura.flutter_twilio'
 version '1.0-SNAPSHOT'
 
 buildscript {
+    ext.kotlin_version = '1.8.20'
+    ext.versions = [
+            java              : JavaVersion.VERSION_1_8,
+            voiceAndroid      : '6.3.0',
+            audioSwitch       : '1.1.2',
+            firebaseMessaging : '23.0.0'
+    ]
     repositories {
         google()
         mavenCentral()
     }
-
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.4")
+        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -20,6 +27,7 @@ allprojects {
 }
 
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
 
 android {
     compileSdk = 36
@@ -35,8 +43,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = versions.java
+        targetCompatibility = versions.java
     }
 
     sourceSets {
@@ -51,28 +59,34 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    // Split native libraries per ABI to fix 16 KB .so limit
+    splits {
+        abi {
+            enable = true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a'
+            universalApk = false
+        }
+    }
+
+    // Optional: pick first if duplicate .so files exist
+    packaging {
+        jniLibs {
+            pickFirsts += ['**/*.so']
+        }
+    }
 }
 
 dependencies {
-    // Firebase
-    implementation platform('com.google.firebase:firebase-bom:33.9.0')
-    implementation "com.google.firebase:firebase-messaging:24.1.0"
-
-    // Kotlin
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21"
-
-    // Twilio
-    implementation "com.twilio:audioswitch:1.1.8"
-    implementation "com.twilio:voice-android:6.6.1"
-
-    // AndroidX
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
-    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
-
-    // Other
+    implementation platform('com.google.firebase:firebase-bom:26.0.0')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "com.twilio:audioswitch:${versions.audioSwitch}"
+    implementation "com.twilio:voice-android:${versions.voiceAndroid}"
+    implementation "com.google.firebase:firebase-messaging:${versions.firebaseMessaging}"
     implementation 'com.squareup.picasso:picasso:2.71828'
-    // implementation files("libs/flutter.jar")
-
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
+    implementation 'androidx.work:work-runtime-ktx:2.8.1'
 }
