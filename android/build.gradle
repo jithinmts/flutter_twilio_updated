@@ -2,20 +2,20 @@ group 'federico.amura.flutter_twilio'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.8.20'
-    ext.versions = [
-            java              : JavaVersion.VERSION_1_8,
-            voiceAndroid      : '6.3.0',
-            audioSwitch       : '1.1.2',
-            firebaseMessaging : '23.0.0'
-    ]
+    ext {
+        kotlinVersion           = "1.9.10"
+        agpVersion              = "8.5.2"
+        twilioVoiceVersion      = "6.9.0"
+        audioSwitch             = '1.1.2'
+    }
     repositories {
         google()
         mavenCentral()
     }
+
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.android.tools.build:gradle:${agpVersion}"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}"
     }
 }
 
@@ -28,6 +28,7 @@ allprojects {
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     compileSdk = 36
@@ -36,56 +37,40 @@ android {
         namespace = 'federico.amura.flutter_twilio'
     }
 
-    defaultConfig {
-        minSdk = 23
-        targetSdk = 36
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    compileOptions {
-        sourceCompatibility = versions.java
-        targetCompatibility = versions.java
+    kotlinOptions {
+        jvmTarget = '1.8'
     }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
-    lint {
-        disable 'InvalidPackage'
+    defaultConfig {
+        minSdkVersion 24
     }
 
-    // BuildConfig explicit (silences deprecated warning)
-    buildFeatures {
-        buildConfig = true
-    }
-
-    // Split native libraries per ABI to fix 16 KB .so limit
-    splits {
-        abi {
-            enable = true
-            reset()
-            include 'armeabi-v7a', 'arm64-v8a'
-            universalApk = false
-        }
-    }
-
-    // Optional: pick first if duplicate .so files exist
-    packaging {
-        jniLibs {
-            pickFirsts += ['**/*.so']
+    buildTypes {
+        release {
+            minifyEnabled false
         }
     }
 }
 
 dependencies {
-    implementation platform('com.google.firebase:firebase-bom:26.0.0')
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "com.twilio:audioswitch:${versions.audioSwitch}"
-    implementation "com.twilio:voice-android:${versions.voiceAndroid}"
-    implementation "com.google.firebase:firebase-messaging:${versions.firebaseMessaging}"
-    implementation 'com.squareup.picasso:picasso:2.71828'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation(platform("org.jetbrains.kotlin:kotlin-bom:${kotlinVersion}"))
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))
+    implementation("com.twilio:voice-android:${twilioVoiceVersion}")
+    implementation "com.twilio:audioswitch:${audioSwitch}"
+    implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
     implementation 'androidx.work:work-runtime-ktx:2.8.1'
