@@ -67,6 +67,7 @@ dependencies {
     implementation("com.twilio:voice-android:${twilioVoiceVersion}")
     implementation "com.twilio:audioswitch:${audioSwitch}"
     implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
+    implementation 'com.squareup.picasso:picasso:2.71828'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.lifecycle:lifecycle-process:2.8.7'
     implementation 'androidx.core:core-ktx:1.15.0'
