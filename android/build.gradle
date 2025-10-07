@@ -54,6 +54,23 @@ android {
     lintOptions {
         disable 'InvalidPackage'
     }
+
+    // Split native libraries per ABI to reduce size and fix 16 KB limit
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a'
+            universalApk false
+        }
+    }
+
+    // Optional: pick first if duplicate .so files exist
+    packagingOptions {
+        jniLibs {
+            pickFirst '**/*.so'
+        }
+    }
 }
 
 dependencies {
