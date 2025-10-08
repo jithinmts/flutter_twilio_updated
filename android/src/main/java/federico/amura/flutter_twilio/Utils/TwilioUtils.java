@@ -226,6 +226,12 @@ public class TwilioUtils {
             throw new RuntimeException("No active call");
         }
         AudioManager audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        );
         boolean isSpeaker = !audioManager.isSpeakerphoneOn();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!isSpeaker)
@@ -239,6 +245,12 @@ public class TwilioUtils {
 
     public void setCommunicationDevice(Context context, Integer targetDeviceType) {
         AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        );
         List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
         for (AudioDeviceInfo device : devices) {
             if (device.getType() == targetDeviceType) {
@@ -254,11 +266,23 @@ public class TwilioUtils {
         }
 
         AudioManager audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        );
         audioManager.setSpeakerphoneOn(speaker);
     }
 
     public boolean isSpeaker() {
         AudioManager audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        );
         return audioManager.isSpeakerphoneOn();
     }
 

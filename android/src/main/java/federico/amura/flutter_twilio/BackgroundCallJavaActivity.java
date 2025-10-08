@@ -136,6 +136,21 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private boolean isSpeaker() {
         AudioManager audioManager = (AudioManager) getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) return false;
+
+        // Set the audio mode for communication
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
+        // Request temporary audio focus for voice call
+        int result = audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        );
+
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            Log.w(TAG, "Audio focus not granted");
+        }
         return audioManager.isSpeakerphoneOn();
     }
 

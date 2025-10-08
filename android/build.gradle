@@ -4,9 +4,9 @@ version '1.0-SNAPSHOT'
 buildscript {
     ext {
         kotlinVersion           = "1.9.10"
-        agpVersion              = "8.5.2"
+        agpVersion              = "8.2.1"
         twilioVoiceVersion      = "6.9.0"
-        audioSwitch             = '1.1.2'
+        audioSwitch             = '1.2.4'
     }
     repositories {
         google()
@@ -31,7 +31,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
-    compileSdk = 36
+    compileSdk = 34
 
     if (project.android.hasProperty("namespace")) {
         namespace = 'federico.amura.flutter_twilio'
