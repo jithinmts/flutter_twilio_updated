@@ -151,7 +151,6 @@ public class FlutterTwilioPlugin implements
                         }
                     });
                 } catch (Exception exception) {
-                    Log.e("TwiloError", exception.printStackTrace());
                     exception.printStackTrace();
                     result.error("", "", "");
                 }
