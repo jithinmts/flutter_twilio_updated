@@ -133,20 +133,25 @@ public class FlutterTwilioPlugin implements
                 String identity = call.argument("identity");
                 String accessToken = call.argument("accessToken");
                 String fcmToken = call.argument("fcmToken");
+                Log.i("TwilioLog:", "identity: " + identity + " ,accessToken: " + accessToken + " ,fcmToken: " + fcmToken);
 
                 try {
                     twilioUtils.register(identity, accessToken, fcmToken, new TwilioRegistrationListener() {
                         @Override
                         public void onRegistered() {
+                            Log.i("TwilioLog:", "in registered success");
                             result.success("");
                         }
 
                         @Override
                         public void onError() {
+                            Log.i("TwilioLog:", "in registered error");
+
                             result.error("", "", "");
                         }
                     });
                 } catch (Exception exception) {
+                    Log.e("TwiloError", exception.printStackTrace());
                     exception.printStackTrace();
                     result.error("", "", "");
                 }
