@@ -31,7 +31,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
-    compileSdk = 34
+    compileSdk = 35
 
     if (project.android.hasProperty("namespace")) {
         namespace = 'federico.amura.flutter_twilio'
