@@ -32,7 +32,8 @@
         <service
             android:name="federico.amura.flutter_twilio.IncomingCallNotificationService"
             android:enabled="true"
-            android:exported="false" >
+            android:exported="false"
+            android:foregroundServiceType="phoneCall">
             <intent-filter>
                 <action android:name="ACTION_ACCEPT"  />
                 <action android:name="ACTION_REJECT" />
