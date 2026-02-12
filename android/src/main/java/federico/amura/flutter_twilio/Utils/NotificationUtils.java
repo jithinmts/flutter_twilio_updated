@@ -82,7 +82,7 @@ public class NotificationUtils {
         @SuppressLint("UnspecifiedImmutableFlag")
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
-                0,
+                1001,
                 intent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
@@ -98,14 +98,14 @@ public class NotificationUtils {
         @SuppressLint("UnspecifiedImmutableFlag")
         PendingIntent piRejectIntent = PendingIntent.getService(
                 context,
-                0,
+                1002,
                 rejectIntent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
         );
 
         // Accept intent
-        Intent acceptIntent = new Intent(context, IncomingCallNotificationService.class);
+       /* Intent acceptIntent = new Intent(context, IncomingCallNotificationService.class);
 //        acceptIntent.setAction(Intent.ACTION_MAIN);
 //        acceptIntent.addCategory(Intent.CATEGORY_LAUNCHER);
         acceptIntent.setAction(TwilioConstants.ACTION_ACCEPT);
@@ -113,10 +113,27 @@ public class NotificationUtils {
         @SuppressLint("UnspecifiedImmutableFlag")
         PendingIntent piAcceptIntent = PendingIntent.getService(
                 context,
-                0,
+                1003,
                 acceptIntent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ?
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
+        );*/
+
+        Intent acceptIntent = new Intent(context, BackgroundCallJavaActivity.class);
+        acceptIntent.setAction(TwilioConstants.ACTION_ACCEPT);
+        acceptIntent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
+        acceptIntent.setFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK |
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
+
+        PendingIntent piAcceptIntent = PendingIntent.getActivity(
+                context,
+                1003,
+                acceptIntent,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                        : PendingIntent.FLAG_UPDATE_CURRENT
         );
 
         // Notification
