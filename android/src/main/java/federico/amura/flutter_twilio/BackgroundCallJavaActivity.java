@@ -109,7 +109,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         btnHangUp.setOnClickListener(v -> this.hangUp());
 
         ImageView btnAccept = findViewById(R.id.btnAccept);
-        btnAccept.setOnClickListener(v -> this.acceptCall());
+        btnAccept.setOnClickListener(v -> checkPermissionsAndAccept());
 
         ImageView btnReject = findViewById(R.id.btnReject);
         btnReject.setOnClickListener(v -> this.rejectCall());
@@ -164,14 +164,17 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 //            SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
 //            editor.clear().apply();
 //        }
-        super.onDestroy();
-        if (wakeLock != null) {
-            if (wakeLock.isHeld()) {
-                wakeLock.release();
-            }
+        try {
+            TwilioUtils.getInstance(this).disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
         }
 
-        this.unregisterReceiver();
+        unregisterReceiver();
+        super.onDestroy();
     }
 
 
@@ -626,15 +629,23 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void close() {
         if (this.exited) return;
+        this.exited = true;
+
+        try {
+            if (TwilioUtils.getInstance(this).getActiveCall() != null) {
+                TwilioUtils.getInstance(this).disconnect();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         if (this.wakeLock != null && this.wakeLock.isHeld()) {
             this.wakeLock.release();
         }
 
         this.stopTimer();
-        this.exited = true;
         handler.removeCallbacks(runnable);
-        this.finish();
+        finish();
     }
 
     @Override
@@ -646,6 +657,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
 
     private void startTimer() {
+        seconds = 0;
         this.textTimer.setVisibility(View.VISIBLE);
         this.textTimer.setText(DateUtils.formatElapsedTime(0));
 

@@ -85,6 +85,8 @@ public class IncomingCallNotificationService extends Service {
                     Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_STOP_SERVICE case");
 
                     stopServiceIncomingCall();
+                    stopSelf();              // ⭐ REQUIRED
+                    return START_NOT_STICKY; // ⭐ REQUIRED
                 }
                 break;
 
@@ -99,7 +101,7 @@ public class IncomingCallNotificationService extends Service {
                     break;
             }
         }
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Override
@@ -147,6 +149,13 @@ public class IncomingCallNotificationService extends Service {
     }
 
     private void handleCancelledCall(Intent intent) {
+        try {
+            if (TwilioUtils.getInstance(this).getActiveCall() != null) {
+                TwilioUtils.getInstance(this).disconnect();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         SoundUtils.getInstance(this).stopRinging();
         CancelledCallInvite cancelledCallInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
         Log.i(TAG, "Call canceled. App visible: " + isAppVisible() + ". Locked: " + isLocked());
@@ -251,9 +260,8 @@ public class IncomingCallNotificationService extends Service {
             Intent intent = new Intent(getApplicationContext(), BackgroundCallJavaActivity.class);
             intent.setFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK |
-                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT |
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
-                            Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
             );
             intent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
 
