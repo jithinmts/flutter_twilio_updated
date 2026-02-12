@@ -210,7 +210,7 @@ public class IncomingCallNotificationService extends Service {
             startForeground(
                     TwilioConstants.NOTIFICATION_INCOMING_CALL,
                     notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
             );
         } else {
             startForeground(TwilioConstants.NOTIFICATION_INCOMING_CALL, notification);
