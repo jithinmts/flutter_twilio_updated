@@ -210,7 +210,11 @@ public class IncomingCallNotificationService extends Service {
     }
 
     private void startServiceIncomingCall(CallInvite callInvite) {
-        Log.e(TAG, "Start service incoming call");
+        Log.e(TAG, "Stop service incoming call");
+
+        if (TwilioUtils.getInstance(this).getActiveCall() != null) {
+            TwilioUtils.getInstance(this).disconnect();
+        }
         SoundUtils.getInstance(this).playRinging();
         Notification notification = NotificationUtils.createIncomingCallNotification(getApplicationContext(), callInvite, true);
         startForeground(TwilioConstants.NOTIFICATION_INCOMING_CALL, notification);

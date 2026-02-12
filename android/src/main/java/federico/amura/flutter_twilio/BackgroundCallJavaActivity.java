@@ -158,24 +158,20 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     public void onBackPressed() {
     }
 
-    @Override
+   /* @Override
     protected void onDestroy() {
 //        if(sharedPreferencesContactData!=null) {
 //            SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
 //            editor.clear().apply();
 //        }
-        try {
-            TwilioUtils.getInstance(this).disconnect();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
         }
 
         unregisterReceiver();
         super.onDestroy();
-    }
+    }*/
 
 
     @Override

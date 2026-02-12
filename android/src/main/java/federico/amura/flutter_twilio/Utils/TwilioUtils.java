@@ -198,7 +198,7 @@ public class TwilioUtils {
         }
 
         this.callInvite = null;
-        this.activeCall = null;
+        //this.activeCall = null;
         this.fromDisplayName = null;
         this.toDisplayName = null;
     }
