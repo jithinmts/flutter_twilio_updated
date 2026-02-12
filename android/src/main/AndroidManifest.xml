@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="federico.amura.flutter_twilio"
-    xmlns:tools="http://schemas.android.com/tools">
+    package="federico.amura.flutter_twilio">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
@@ -35,8 +34,7 @@
             android:name="federico.amura.flutter_twilio.IncomingCallNotificationService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="microphone"
-            tools:node="replace">
+            android:foregroundServiceType="microphone">
             <intent-filter>
                 <action android:name="ACTION_ACCEPT"  />
                 <action android:name="ACTION_REJECT" />

@@ -205,8 +205,8 @@ public class IncomingCallNotificationService extends Service {
         Log.e(TAG, "Start service incoming call");
         SoundUtils.getInstance(this).playRinging();
         Notification notification = NotificationUtils.createIncomingCallNotification(getApplicationContext(), callInvite, true);
-        //startForeground(TwilioConstants.NOTIFICATION_INCOMING_CALL, notification);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        startForeground(TwilioConstants.NOTIFICATION_INCOMING_CALL, notification);
+        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                     TwilioConstants.NOTIFICATION_INCOMING_CALL,
                     notification,
@@ -214,7 +214,7 @@ public class IncomingCallNotificationService extends Service {
             );
         } else {
             startForeground(TwilioConstants.NOTIFICATION_INCOMING_CALL, notification);
-        }
+        }*/
     }
 
     private void stopServiceIncomingCall() {
