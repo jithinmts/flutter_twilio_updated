@@ -2,7 +2,7 @@
     package="federico.amura.flutter_twilio">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -34,7 +34,7 @@
             android:name="federico.amura.flutter_twilio.IncomingCallNotificationService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="microphone">
+            android:foregroundServiceType="dataSync">
             <intent-filter>
                 <action android:name="ACTION_ACCEPT"  />
                 <action android:name="ACTION_REJECT" />
