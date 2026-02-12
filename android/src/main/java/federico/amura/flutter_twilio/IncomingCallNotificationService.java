@@ -86,7 +86,6 @@ public class IncomingCallNotificationService extends Service {
 
                     stopServiceIncomingCall();
                     stopSelf();              // ⭐ REQUIRED
-                    return START_NOT_STICKY; // ⭐ REQUIRED
                 }
                 break;
 
