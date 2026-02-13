@@ -164,7 +164,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 //            SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
 //            editor.clear().apply();
 //        }
-        
+
         // your existing cleanup
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
@@ -486,6 +486,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
         String status = (String) call.get("status");
         if (status != null && !status.trim().equals("")) {
+            Log.e("*TwilioCallStatus******", "...." + status);
             switch (status) {
                 case "callRinging": {
                     Log.e("*Twilio*", "...........callRinging.........");
@@ -627,20 +628,25 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void close() {
+        Log.e("*TwilioCallCloseMethod******", "....01");
         if (this.exited) return;
         this.exited = true;
-
+        Log.e("*TwilioCallCloseMethod******", "....02");
         try {
             if (TwilioUtils.getInstance(getApplicationContext()).getActiveCall() != null) {
+                Log.e("*TwilioCallCloseMethod******", "....03");
                 TwilioUtils.getInstance(getApplicationContext()).disconnect();
             }
         } catch (Exception e) {
+            Log.e("*TwilioCallCloseMethod******", "....04");
+
             e.printStackTrace();
         }
 
         if (this.wakeLock != null && this.wakeLock.isHeld()) {
             this.wakeLock.release();
         }
+        Log.e("*TwilioCallCloseMethod******", "....05");
 
         this.stopTimer();
         handler.removeCallbacks(runnable);
