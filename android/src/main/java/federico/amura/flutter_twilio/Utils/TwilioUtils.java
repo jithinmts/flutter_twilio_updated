@@ -37,9 +37,8 @@ public class TwilioUtils {
     public static TwilioUtils getInstance(Context context) {
         if (instance == null) {
             instance = new TwilioUtils();
+            instance.context = context.getApplicationContext();
         }
-
-        instance.context = context;
         return instance;
     }
 
@@ -193,13 +192,12 @@ public class TwilioUtils {
     public void disconnect() {
         this.status = "callDisconnected";
         try {
-            if (this.activeCall != null) {
-                if (this.activeCall.getState() != Call.State.DISCONNECTED) {
-                    this.activeCall.disconnect();
-                }
+            if (activeCall != null) {
+                Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
+                activeCall.disconnect();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "disconnect error", e);
         }
 
         SoundUtils.getInstance(this.context).playDisconnect();
@@ -411,6 +409,7 @@ public class TwilioUtils {
             @Override
             public void onConnected(@NonNull Call call) {
                 Log.i(TAG, "onConnected");
+                Log.e(TAG, "CONNECTED SID = " + call.getSid());
                 activeCall = call;
                 status = "callConnected";
 

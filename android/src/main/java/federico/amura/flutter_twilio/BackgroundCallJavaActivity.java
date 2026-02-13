@@ -164,6 +164,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 //            SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
 //            editor.clear().apply();
 //        }
+        
+        // your existing cleanup
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
         }
@@ -375,9 +377,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         try {
             stopServiceIncomingCall();
 
-            // IMPORTANT
-            TwilioUtils.getInstance(this).disconnect();
-
             if (this.callInvite == null) {
                 close();
                 return;
@@ -386,7 +385,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             containerActiveCall.setVisibility(View.VISIBLE);
             containerIncomingCall.setVisibility(View.GONE);
 
-            TwilioUtils.getInstance(this)
+            TwilioUtils.getInstance(getApplicationContext())
                     .acceptInvite(this.callInvite, getListener());
         } catch (Exception exception) {
             exception.printStackTrace();
@@ -397,17 +396,16 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private void rejectCall() {
         stopServiceIncomingCall();
 
-        if (this.callInvite == null) {
-            Log.i(TAG, "No call invite");
-            this.close();
-            return;
+        if (this.callInvite != null) {
+            try {
+                this.callInvite.reject(this);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
-        try {
-            this.callInvite.reject(this);
-        } catch (Exception exception) {
-            exception.printStackTrace();
-        }
+        // ADD THIS — important safety cleanup
+        TwilioUtils.getInstance(this).disconnect();
 
         this.close();
     }
@@ -415,7 +413,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void hangUp() {
         try {
-            TwilioUtils.getInstance(this).disconnect();
+            TwilioUtils.getInstance(getApplicationContext()).disconnect();
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -425,7 +423,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void onCallCanceled() {
         try {
-            TwilioUtils.getInstance(this).disconnect();
+            TwilioUtils.getInstance(getApplicationContext()).disconnect();
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -435,7 +433,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void toggleMute() {
         try {
-            boolean muted = TwilioUtils.getInstance(this).toggleMute();
+            boolean muted = TwilioUtils.getInstance(getApplicationContext()).toggleMute();
             applyColorToButton(this.btnMute, muted);
             this.btnMute.setImageResource(muted ? R.drawable.ic_mic_off : R.drawable.ic_mic);
         } catch (Exception exception) {
@@ -446,7 +444,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private void toggleSpeaker() {
 
         try {
-            boolean speaker = TwilioUtils.getInstance(this).toggleSpeaker();
+            boolean speaker = TwilioUtils.getInstance(getApplicationContext()).toggleSpeaker();
             applyColorToButton(this.btnSpeaker, speaker);
         } catch (Exception exception) {
             exception.printStackTrace();
@@ -483,7 +481,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void updateCallDetails() {
-        HashMap<String, Object> call = TwilioUtils.getInstance(this).getCallDetails();
+        HashMap<String, Object> call = TwilioUtils.getInstance(getApplicationContext()).getCallDetails();
 
 
         String status = (String) call.get("status");
@@ -633,8 +631,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.exited = true;
 
         try {
-            if (TwilioUtils.getInstance(this).getActiveCall() != null) {
-                TwilioUtils.getInstance(this).disconnect();
+            if (TwilioUtils.getInstance(getApplicationContext()).getActiveCall() != null) {
+                TwilioUtils.getInstance(getApplicationContext()).disconnect();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -771,7 +769,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         notificationManager.cancel(100);
         try {
             Log.e(TAG, "*******************************************122" + callInvite.getTo().replace("client:", ""));
-            TwilioUtils.getInstance(this).makeCall(callInvite.getFrom(), data, getListener());
+            TwilioUtils.getInstance(getApplicationContext()).makeCall(callInvite.getFrom(), data, getListener());
             Log.e(TAG, "*******************************************222" + callInvite.getFrom());
         } catch (Exception exception) {
             Log.e(TAG, "*******************************************212");
