@@ -192,10 +192,17 @@ public class TwilioUtils {
 
     public void disconnect() {
         this.status = "callDisconnected";
-        if (this.activeCall != null) {
-            this.activeCall.disconnect();
-            SoundUtils.getInstance(this.context).playDisconnect();
+        try {
+            if (this.activeCall != null) {
+                if (this.activeCall.getState() != Call.State.DISCONNECTED) {
+                    this.activeCall.disconnect();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        SoundUtils.getInstance(this.context).playDisconnect();
 
         this.callInvite = null;
         this.activeCall = null;
