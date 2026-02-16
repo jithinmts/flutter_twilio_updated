@@ -306,4 +306,17 @@ public class IncomingCallNotificationService extends Service {
             startActivity(intent);
         }
     }
+
+    @Override
+    public void onDestroy() {
+        Log.d("*******************IncomingCallService", "Service destroyed");
+
+        try {
+            stopForeground(true); // remove notification
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        super.onDestroy();
+    }
 }

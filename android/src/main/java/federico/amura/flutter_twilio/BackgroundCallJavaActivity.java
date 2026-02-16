@@ -88,6 +88,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
         setContentView(R.layout.activity_background_call);
         Log.e(TAG, "******* BackgroundCallJavaActivity onCreate");
         this.container = findViewById(R.id.container);
@@ -403,11 +407,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 e.printStackTrace();
             }
         }
-
-        // ADD THIS — important safety cleanup
-        TwilioUtils.getInstance(this).disconnect();
-
-        this.close();
     }
 
 
@@ -417,8 +416,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         } catch (Exception exception) {
             exception.printStackTrace();
         }
-
-        this.close();
     }
 
     private void onCallCanceled() {
@@ -427,8 +424,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         } catch (Exception exception) {
             exception.printStackTrace();
         }
-
-        this.close();
     }
 
     private void toggleMute() {
@@ -632,16 +627,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         if (this.exited) return;
         this.exited = true;
         Log.e("*TwilioCallCloseMethod******", "....02");
-        try {
-            if (TwilioUtils.getInstance(getApplicationContext()).getActiveCall() != null) {
-                Log.e("*TwilioCallCloseMethod******", "....03");
-                TwilioUtils.getInstance(getApplicationContext()).disconnect();
-            }
-        } catch (Exception e) {
-            Log.e("*TwilioCallCloseMethod******", "....04");
-
-            e.printStackTrace();
-        }
 
         if (this.wakeLock != null && this.wakeLock.isHeld()) {
             this.wakeLock.release();
@@ -711,6 +696,13 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             @Override
             public void onConnected(@NonNull Call call) {
                 updateCallDetails();
+
+                // Stop incoming call foreground service
+                Intent serviceIntent = new Intent(
+                        BackgroundCallJavaActivity.this,
+                        IncomingCallNotificationService.class
+                );
+                stopService(serviceIntent);
             }
 
             @Override
