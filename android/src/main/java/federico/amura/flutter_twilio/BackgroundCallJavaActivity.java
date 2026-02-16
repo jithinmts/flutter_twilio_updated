@@ -338,10 +338,15 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void stopServiceIncomingCall() {
-        Intent intent = new Intent(this, IncomingCallNotificationService.class);
+        try {
+            Intent intent = new Intent(this, IncomingCallNotificationService.class);
+            stopService(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        /*Intent intent = new Intent(this, IncomingCallNotificationService.class);
         intent.setAction(TwilioConstants.ACTION_STOP_SERVICE);
-        //startService(intent);
-        ContextCompat.startForegroundService(this, intent);
+        startService(intent);*/
     }
 
     private void checkPermissionsAndAccept() {
