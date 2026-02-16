@@ -17,6 +17,7 @@ import com.twilio.voice.Voice;
 
 import federico.amura.flutter_twilio.IncomingCallNotificationService;
 import federico.amura.flutter_twilio.Utils.TwilioConstants;
+import androidx.core.content.ContextCompat;
 
 
 public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
@@ -81,7 +82,8 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
             intent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
 
             Log.d("Twilio getCallSid 1", callInvite.getCallSid());
-            startService(intent);
+           // startService(intent);
+            ContextCompat.startForegroundService(this, intent);
         }catch (Exception e){
             Log.e("***Twilio exception ", e.toString());
         }
@@ -92,7 +94,8 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
         Intent intent = new Intent(this, IncomingCallNotificationService.class);
         intent.setAction(TwilioConstants.ACTION_CANCEL_CALL);
         intent.putExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE, cancelledCallInvite);
-        startService(intent);
+        //startService(intent);
+        ContextCompat.startForegroundService(this, intent);
     }
 }
 

@@ -52,6 +52,7 @@ import java.util.TimerTask;
 import federico.amura.flutter_twilio.Utils.PreferencesUtils;
 import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.Utils.TwilioUtils;
+import androidx.core.content.ContextCompat;
 
 public class BackgroundCallJavaActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -339,7 +340,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private void stopServiceIncomingCall() {
         Intent intent = new Intent(this, IncomingCallNotificationService.class);
         intent.setAction(TwilioConstants.ACTION_STOP_SERVICE);
-        startService(intent);
+        //startService(intent);
+        ContextCompat.startForegroundService(this, intent);
     }
 
     private void checkPermissionsAndAccept() {
