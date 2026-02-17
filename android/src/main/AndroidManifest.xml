@@ -2,7 +2,6 @@
     package="federico.amura.flutter_twilio">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -33,12 +32,7 @@
         <service
             android:name="federico.amura.flutter_twilio.IncomingCallNotificationService"
             android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_REASON"
-                android:value="voip_incoming_call_ringing" />
+            android:exported="false">
 
             <intent-filter>
                 <action android:name="ACTION_ACCEPT"  />
