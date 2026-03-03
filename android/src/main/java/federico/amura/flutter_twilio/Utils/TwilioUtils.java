@@ -191,7 +191,7 @@ public class TwilioUtils {
         SoundUtils.getInstance(this.context).playDisconnect();
     }
 
-    public static synchronized void disconnect() {
+    public synchronized void disconnect() {
         Log.e(TAG, "INSIDE DISCONNECT");
         if (activeCall == null) return;
 
