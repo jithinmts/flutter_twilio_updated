@@ -2,6 +2,7 @@ package federico.amura.flutter_twilio.Utils;
 
 import android.content.Context;
 import android.media.AudioAttributes;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.VibrationEffect;
@@ -17,7 +18,6 @@ public class SoundUtils {
     private boolean isRinging = false;
 
     private Vibrator vibrator;
-    private AudioManager audioManager;
     private Context appContext;
 
     private SoundUtils(Context context) {
