@@ -370,7 +370,7 @@ public class FlutterTwilioPlugin implements
             if (callInvite == null) return;
             Log.d(TAG, "answer CALL: ");
             TwilioUtils t = TwilioUtils.getInstance(this.context);
-            t.acceptInvite(callInvite, getCallListener());
+            t.acceptInvite(callInvite);
             responseChannel.invokeMethod("callConnecting", t.getCallDetails());
             Log.d(TAG, "answer CALL: ");
         } catch (Exception exception) {
