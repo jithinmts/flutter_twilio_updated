@@ -1,10 +1,9 @@
 package federico.amura.flutter_twilio.Utils;
 
-import static android.content.Context.AUDIO_SERVICE;
-
 import android.content.Context;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
-import android.media.SoundPool;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -13,97 +12,97 @@ import federico.amura.flutter_twilio.R;
 
 public class SoundUtils {
 
-    private boolean playing = false;
-    private boolean loaded = false;
-    private boolean playingCalled = false;
-    private final float volume;
-    private final SoundPool soundPool;
-    private final int ringingSoundId;
-    private int ringingStreamId;
-    private final int disconnectSoundId;
     private static SoundUtils instance;
-    private final Vibrator vibrator;
-    private final AudioManager audioManager;
+
+    private MediaPlayer mediaPlayer;
+    private boolean isRinging = false;
+
+    private Vibrator vibrator;
+    private AudioManager audioManager;
+    private Context appContext;
 
     private SoundUtils(Context context) {
-        audioManager = (AudioManager) context.getSystemService(AUDIO_SERVICE);
-        float actualVolume = (float) audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        float maxVolume = (float) audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        volume = actualVolume / maxVolume;
-
-        // Load the sounds
-        int maxStreams = 1;
-        soundPool = new SoundPool.Builder()
-                .setMaxStreams(maxStreams)
-                .build();
-
-        soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
-            @Override
-            public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
-                loaded = true;
-                if (playingCalled && sampleId == ringingSoundId) {
-                    playRinging();
-                    playingCalled = false;
-                }
-            }
-
-        });
-        ringingSoundId = soundPool.load(context, R.raw.incoming, 1);
-        disconnectSoundId = soundPool.load(context, R.raw.disconnect, 1);
-
-        vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        this.appContext = context.getApplicationContext();
+        this.vibrator = (Vibrator) appContext.getSystemService(Context.VIBRATOR_SERVICE);
+        this.audioManager = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
     }
 
-    public static SoundUtils getInstance(Context context) {
+    public static synchronized SoundUtils getInstance(Context context) {
         if (instance == null) {
             instance = new SoundUtils(context);
         }
         return instance;
     }
 
-    public void playRinging() {
-        if (loaded && !playing) {
+    public synchronized void playRinging() {
 
-            switch (audioManager.getRingerMode()) {
-                case AudioManager.RINGER_MODE_NORMAL:
-                    ringingStreamId = soundPool.play(ringingSoundId, volume, volume, 1, -1, 1f);
-                    vibrate();
-                    break;
-                case AudioManager.RINGER_MODE_VIBRATE:
-                    vibrate();
-                    break;
-                default:
-                    break;
+        if (isRinging) {
+            return; // 🔒 already ringing
+        }
+
+        try {
+            stopRinging(); // extra safety
+
+            mediaPlayer = MediaPlayer.create(appContext, R.raw.incoming);
+
+            if (mediaPlayer == null) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                mediaPlayer.setAudioAttributes(
+                        new AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                );
+            } else {
+                mediaPlayer.setAudioStreamType(AudioManager.STREAM_RING);
             }
-            playing = true;
-        } else {
-            playingCalled = true;
+
+            mediaPlayer.setLooping(true);
+            mediaPlayer.start();
+
+            vibrate();
+
+            isRinging = true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     private void vibrate() {
-        long[] mVibratePattern = new long[]{0, 400, 400, 400, 400, 400, 400, 400};
-        final int[] mAmplitudes = new int[]{0, 128, 0, 128, 0, 128, 0, 128};
+        if (vibrator == null) return;
+
+        long[] pattern = new long[]{0, 500, 500};
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createWaveform(mVibratePattern, mAmplitudes, 0));
+            vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0));
         } else {
-            //deprecated in API 26
-            vibrator.vibrate(mVibratePattern, 0);
+            vibrator.vibrate(pattern, 0);
         }
     }
 
-    public void stopRinging() {
-        if (playing) {
-            soundPool.stop(ringingStreamId);
-            vibrator.cancel();
-            playing = false;
-        }
+    public synchronized void stopRinging() {
+        try {
+            if (mediaPlayer != null) {
+                if (mediaPlayer.isPlaying()) {
+                    mediaPlayer.stop();
+                }
+                mediaPlayer.release();
+                mediaPlayer = null;
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            if (vibrator != null) {
+                vibrator.cancel();
+            }
+        } catch (Exception ignored) {}
+
+        isRinging = false;
     }
 
-    public void playDisconnect() {
-        if (loaded && !playing) {
-            soundPool.play(disconnectSoundId, volume, volume, 1, 0, 1f);
-            playing = false;
-        }
+    public boolean isRinging() {
+        return isRinging;
     }
 }

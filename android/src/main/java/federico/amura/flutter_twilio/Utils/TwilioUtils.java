@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import federico.amura.flutter_twilio.Utils.SoundUtils;
 
 public class TwilioUtils {
     private static final String TAG = "TwilioUtils";
@@ -159,6 +160,7 @@ public class TwilioUtils {
     }
 
     public void acceptInvite(CallInvite callInvite, Call.Listener listener) {
+        SoundUtils.getInstance(this.context).stopRinging();
        Log.e(TAG, "onCallInvite:" + callInvite.getCallSid());
         String from = callInvite.getFrom();
         Log.e(TAG, "tw_from:" + from);
@@ -388,7 +390,7 @@ public class TwilioUtils {
             @Override
             public void onConnectFailure(@NonNull Call call, @NonNull CallException e) {
                 e.printStackTrace();
-
+                SoundUtils.getInstance(context).stopRinging();
                 Log.i(TAG, "onConnectFailure. Error: " + e.getMessage());
 
                 status = "callDisconnected";
@@ -414,6 +416,10 @@ public class TwilioUtils {
             public void onConnected(@NonNull Call call) {
                 Log.i(TAG, "onConnected");
                 Log.e(TAG, "CONNECTED SID = " + call.getSid());
+
+                // ✅ STOP RINGING HERE
+                SoundUtils.getInstance(context).stopRinging();
+
                 activeCall = call;
                 status = "callConnected";
 
@@ -448,6 +454,7 @@ public class TwilioUtils {
 
             @Override
             public void onDisconnected(@NonNull Call call, CallException e) {
+                SoundUtils.getInstance(context).stopRinging();
                 if (e != null) {
                     e.printStackTrace();
                     Log.i(TAG, "onDisconnected. Error: " + e.getMessage());

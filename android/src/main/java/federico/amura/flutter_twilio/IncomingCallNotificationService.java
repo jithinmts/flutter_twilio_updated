@@ -51,8 +51,10 @@ public class IncomingCallNotificationService extends Service {
                 case TwilioConstants.ACTION_INCOMING_CALL: {
                     Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_INCOMING_CALL case");
                     CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
-                    Log.e(TAG, "ACTION_INCOMING_CALL call Invite " + callInvite.getCallSid());
-                    handleIncomingCall(callInvite);
+                    if (callInvite != null) {
+                        Log.e(TAG, "ACTION_INCOMING_CALL call Invite " + callInvite.getCallSid());
+                        handleIncomingCall(callInvite);
+                    }
                 }
                 break;
 
@@ -124,14 +126,13 @@ public class IncomingCallNotificationService extends Service {
 
     private void accept(CallInvite callInvite) {
         Log.e(TAG, "Accept call invite. App visible: " + isAppVisible() + ". Locked: " + isLocked());
-        this.stopServiceIncomingCall();
+        SoundUtils.getInstance(this).stopRinging();   // ADD THIS FIRST
+        stopServiceIncomingCall();
+        stopSelf();  // ⭐ ADD THIS LINE ⭐
         if (!isLocked() && isAppVisible()) {
-            // Inform call accepted
-            Log.i(TAG, "Answering from APP");
-            this.informAppAcceptCall(callInvite);
+            informAppAcceptCall(callInvite);
         } else {
-            Log.i(TAG, "Answering from custom UI");
-            this.openBackgroundCallActivityForAcceptCall(callInvite);
+            openBackgroundCallActivityForAcceptCall(callInvite);
         }
     }
 
@@ -230,9 +231,9 @@ public class IncomingCallNotificationService extends Service {
 
     private void stopServiceIncomingCall() {
         Log.e(TAG, "Stop service incoming call");
+        SoundUtils.getInstance(this).stopRinging();
         stopForeground(true);
         NotificationUtils.cancel(this, TwilioConstants.NOTIFICATION_INCOMING_CALL);
-        SoundUtils.getInstance(this).stopRinging();
     }
 
     private void stopServiceMissedCall() {

@@ -99,7 +99,7 @@ public class FlutterTwilioPlugin implements
     @Override
     public void onDetachedFromActivity() {
         Log.d(TAG, "onDetachedFromActivity");
-//        this.unregisterReceiver();
+        this.unregisterReceiver();
     }
 
     @Override
@@ -367,6 +367,7 @@ public class FlutterTwilioPlugin implements
 
     private void answer(CallInvite callInvite) {
         try {
+            if (callInvite == null) return;
             Log.d(TAG, "answer CALL: ");
             TwilioUtils t = TwilioUtils.getInstance(this.context);
             t.acceptInvite(callInvite, getCallListener());

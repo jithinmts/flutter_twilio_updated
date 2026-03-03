@@ -144,7 +144,7 @@ public class NotificationUtils {
         builder.setCategory(NotificationCompat.CATEGORY_CALL);
         builder.setAutoCancel(true);
         builder.setExtras(extras);
-        builder.setVibrate(new long[]{0, 400, 400, 400, 400, 400, 400, 400});
+        builder.setDefaults(Notification.DEFAULT_VIBRATE);
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 //        if (!(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) || isAppVisible())
         builder.addAction(android.R.drawable.ic_menu_delete, context.getString(R.string.btn_reject), piRejectIntent);
@@ -201,7 +201,9 @@ public class NotificationUtils {
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
         );
 
-        Intent LaunchIntent = context.getPackageManager().getLaunchIntentForPackage("com.tch.crm");
+        //Intent LaunchIntent = context.getPackageManager().getLaunchIntentForPackage("com.tch.crm");
+        Intent launchIntent = context.getPackageManager()
+                .getLaunchIntentForPackage(context.getPackageName());
         LaunchIntent.setAction(TwilioConstants.ACTION_MISSED_CALL);
         LaunchIntent.putExtra("TwilioConstant", "cancelledCallInvite");
         LaunchIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);

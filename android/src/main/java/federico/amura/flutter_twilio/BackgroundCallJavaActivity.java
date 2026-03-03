@@ -33,7 +33,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -89,6 +88,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SoundUtils.getInstance(getApplicationContext()).stopRinging(); // ⭐ ADD THIS
+
         setContentView(R.layout.activity_background_call);
         Log.e(TAG, "******* BackgroundCallJavaActivity onCreate");
         this.container = findViewById(R.id.container);
@@ -360,7 +361,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
     }
 
-    private Boolean checkPermissionForMicrophone() {
+    private boolean checkPermissionForMicrophone() {
         int resultMic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
         return resultMic == PackageManager.PERMISSION_GRANTED;
     }
@@ -382,6 +383,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void acceptCall() {
         try {
+            SoundUtils.getInstance(getApplicationContext()).stopRinging(); // ⭐ ADD
+
             stopServiceIncomingCall();
 
             if (this.callInvite == null) {
@@ -706,6 +709,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         return new Call.Listener() {
             @Override
             public void onConnectFailure(@NonNull Call call, @NonNull CallException callException) {
+                SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 updateCallDetails();
                 close();
             }
@@ -717,6 +721,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
             @Override
             public void onConnected(@NonNull Call call) {
+                SoundUtils.getInstance(getApplicationContext()).stopRinging();
+                stopServiceIncomingCall();
                 updateCallDetails();
             }
 
@@ -732,6 +738,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
             @Override
             public void onDisconnected(@NonNull Call call, @Nullable CallException callException) {
+                SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 updateCallDetails();
                 close();
             }
