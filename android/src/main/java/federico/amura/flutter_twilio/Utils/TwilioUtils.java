@@ -191,7 +191,7 @@ public class TwilioUtils {
         SoundUtils.getInstance(this.context).playDisconnect();
     }
 
-    public static synchronized void disconnect() {
+    public synchronized void disconnect() {
         if (activeCall != null) {
             Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
             activeCall.disconnect();
@@ -441,7 +441,7 @@ public class TwilioUtils {
             @Override
             public void onDisconnected(@NonNull Call call, CallException e) {
                 SoundUtils.getInstance(context).stopRinging();
-
+                Log.e(TAG, "CALL FULLY DISCONNECTED");
                 status = "callDisconnected";
                 activeCall = null;
                 callInvite = null;
@@ -450,12 +450,13 @@ public class TwilioUtils {
                 if (listener != null) {
                     listener.onDisconnected(call, e);
                 }
-                if (e != null) {
+
+               /* if (e != null) {
                     e.printStackTrace();
                     Log.i(TAG, "onDisconnected. Error: " + e.getMessage());
                 } else {
                     Log.i(TAG, "onDisconnected");
-                }
+                }*/
             }
 
             @Override
