@@ -535,16 +535,14 @@ public class TwilioUtils {
     public void forceTerminateCall() {
         try {
             Log.i(TAG, "*******forceTerminateCall*******");
-            if (activeCall != null) {
-                activeCall.disconnect();
-            }
+            if (activeCall == null) return;
+
+            Call call = activeCall;
 
             activeCall = null;
             callInvite = null;
-            fromDisplayName = null;
-            toDisplayName = null;
             status = "callDisconnected";
-
+            call.disconnect();
         } catch (Exception e) {
             e.printStackTrace();
         }
