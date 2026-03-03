@@ -51,14 +51,16 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
             boolean valid = Voice.handleMessage(this, remoteMessage.getData(), new MessageListener() {
                 @Override
                 public void onCallInvite(@NonNull CallInvite callInvite) {
-                    String from=callInvite.getFrom();
-                    final int notificationId = (int) System.currentTimeMillis();
+                    TwilioUtils.getInstance(getApplicationContext())
+                            .setCallInvite(callInvite);
                     handleInvite(callInvite);
                 }
 
                 @Override
                 public void onCancelledCallInvite(@NonNull CancelledCallInvite cancelledCallInvite, @Nullable CallException callException) {
                     Log.e("********Twilio ", "onCancelledCallInvite");
+                    TwilioUtils.getInstance(getApplicationContext())
+                            .clearCallInvite();
                     handleCanceledCallInvite(cancelledCallInvite);
                 }
             });

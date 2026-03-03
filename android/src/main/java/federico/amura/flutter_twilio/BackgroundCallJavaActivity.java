@@ -163,12 +163,19 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onDestroy() {
-//        if(sharedPreferencesContactData!=null) {
-//            SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
-//            editor.clear().apply();
-//        }
+        TwilioUtils twilio = TwilioUtils.getInstance(getApplicationContext());
 
-        // your existing cleanup
+        CallInvite invite = twilio.getCallInvite();
+
+        if (invite != null) {
+            Log.e(TAG, "Activity destroyed. Rejecting pending invite.");
+            twilio.rejectInvite(invite);
+        }
+
+        if (twilio.getActiveCall() != null) {
+            twilio.disconnect();
+        }
+
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
         }
@@ -300,6 +307,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         switch (intent.getAction()) {
             case TwilioConstants.ACTION_INCOMING_CALL: {
                 this.callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+                TwilioUtils.getInstance(getApplicationContext())
+                        .setCallInvite(this.callInvite);
                 containerIncomingCall.setVisibility(View.VISIBLE);
                 containerActiveCall.setVisibility(View.GONE);
                 updateCallDetails();
@@ -308,6 +317,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
             case TwilioConstants.ACTION_ACCEPT: {
                 this.callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+                TwilioUtils.getInstance(getApplicationContext())
+                        .setCallInvite(this.callInvite);
                 containerIncomingCall.setVisibility(View.GONE);
                 containerActiveCall.setVisibility(View.VISIBLE);
                 updateCallDetails();
@@ -407,12 +418,15 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private void rejectCall() {
         stopServiceIncomingCall();
 
-        if (this.callInvite != null) {
-            try {
-                this.callInvite.reject(this);   // ✅ only reject invite
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            if (this.callInvite != null) {
+                Log.e(TAG, "Rejecting invite SID = " + this.callInvite.getCallSid());
+
+                TwilioUtils.getInstance(getApplicationContext())
+                        .rejectInvite(this.callInvite);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         closeWithoutDisconnect();

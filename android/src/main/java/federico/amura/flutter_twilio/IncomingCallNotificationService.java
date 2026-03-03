@@ -49,37 +49,65 @@ public class IncomingCallNotificationService extends Service {
         if (action != null) {
             switch (action) {
                 case TwilioConstants.ACTION_INCOMING_CALL: {
-                    Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_INCOMING_CALL case");
-                    CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
-                    if (callInvite != null) {
-                        Log.e(TAG, "ACTION_INCOMING_CALL call Invite " + callInvite.getCallSid());
-                        handleIncomingCall(callInvite);
+                    Log.e("*Twilio onStartCommand ", "ACTION_INCOMING_CALL case");
+
+                    CallInvite callInvite =
+                            intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+                    if (callInvite == null) {
+                        callInvite = TwilioUtils.getInstance(this).getCallInvite();
                     }
+                    if (callInvite == null) {
+                        Log.e(TAG, "Incoming call invite is NULL");
+                        stopSelf();
+                        break;
+                    }
+
+                    Log.e(TAG, "Incoming call SID = " + callInvite.getCallSid());
+                    handleIncomingCall(callInvite);
                 }
                 break;
 
                 case TwilioConstants.ACTION_ACCEPT: {
-                    Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_ACCEPT case");
+                    Log.e("*Twilio onStartCommand ", "ACTION_ACCEPT case");
 
-                    CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
-                    Log.e(TAG, "ACTION_ACCEPT call Invite " + callInvite.getCallSid());
+                    CallInvite callInvite =
+                            intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+                    if (callInvite == null) {
+                        callInvite = TwilioUtils.getInstance(this).getCallInvite();
+                    }
+                    if (callInvite == null) {
+                        Log.e(TAG, "Accept failed: invite is NULL");
+                        stopSelf();
+                        break;
+                    }
+
+                    Log.e(TAG, "Accept call SID = " + callInvite.getCallSid());
                     accept(callInvite);
                 }
                 break;
                 case TwilioConstants.ACTION_REJECT: {
-                    Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_REJECT case");
-                    CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+                    Log.e("*Twilio onStartCommand ", "ACTION_REJECT case");
+
+                    CallInvite callInvite =
+                            intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+
+                    if (callInvite == null) {
+                        callInvite = TwilioUtils.getInstance(this).getCallInvite();
+                    }
+
+                    if (callInvite == null) {
+                        Log.e(TAG, "Reject failed: invite is NULL");
+                        stopSelf();
+                        break;
+                    }
+
+                    Log.e(TAG, "Reject call SID = " + callInvite.getCallSid());
                     reject(callInvite);
                 }
                 break;
                 case TwilioConstants.ACTION_CANCEL_CALL: {
                     Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_CANCEL_CALL case");
-
-//                    CancelledCallInvite cancelledCallInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
                     handleCancelledCall(intent);
-//
-//                    CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
-//                    this.startServiceMissedCall(callInvite,cancelledCallInvite);
                 }
                 break;
 
@@ -116,19 +144,29 @@ public class IncomingCallNotificationService extends Service {
             return;
         }
 
+        // 🔥 STORE INVITE GLOBALLY (VERY IMPORTANT)
+        TwilioUtils.getInstance(getApplicationContext())
+                .setCallInvite(callInvite);
+
         Log.e(TAG, "Incoming call. App visible: " + isAppVisible() + ". Locked: " + isLocked());
+
         if (TwilioUtils.getInstance(this).getActiveCall() != null) {
             Log.i(TAG, "Incoming call. There is already an active call");
             return;
         }
+
         this.startServiceIncomingCall(callInvite);
     }
 
     private void accept(CallInvite callInvite) {
-        Log.e(TAG, "Accept call invite. App visible: " + isAppVisible() + ". Locked: " + isLocked());
-        SoundUtils.getInstance(this).stopRinging();   // ADD THIS FIRST
+        SoundUtils.getInstance(this).stopRinging();
         stopServiceIncomingCall();
-        stopSelf();  // ⭐ ADD THIS LINE ⭐
+
+        TwilioUtils utils = TwilioUtils.getInstance(this);
+        utils.setCallInvite(callInvite); // 🔥 ensure stored
+
+        stopSelf();
+
         if (!isLocked() && isAppVisible()) {
             informAppAcceptCall(callInvite);
         } else {
@@ -137,15 +175,24 @@ public class IncomingCallNotificationService extends Service {
     }
 
     private void reject(CallInvite callInvite) {
-        Log.e(TAG, "Reject call invite. App visible: " + isAppVisible() + ". Locked: " + isLocked());
-        this.stopServiceIncomingCall();
+        Log.e(TAG, "Reject call invite from service");
 
-        // Reject call
-        try {
-            TwilioUtils.getInstance(this).rejectInvite(callInvite);
-        } catch (Exception exception) {
-            exception.printStackTrace();
+        stopServiceIncomingCall();
+
+        if (callInvite != null) {
+            try {
+                Log.e(TAG, "Rejecting invite SID = " + callInvite.getCallSid());
+                callInvite.reject(this);  // 🔥 ALWAYS use the invite from intent
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            Log.e(TAG, "Reject failed: invite from intent is null");
         }
+
+        // Clear stored invite
+        TwilioUtils.getInstance(this).clearCallInvite();
+
         stopSelf();
     }
 
@@ -159,6 +206,7 @@ public class IncomingCallNotificationService extends Service {
         // Cancel means call was never connected
 
         stopServiceIncomingCall();
+        TwilioUtils.getInstance(this).clearCallInvite();
         stopSelf();
 
         CancelledCallInvite cancelledCallInvite =

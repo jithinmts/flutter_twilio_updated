@@ -182,8 +182,9 @@ public class TwilioUtils {
         if (callInvite == null) {
             throw new RuntimeException("No call invite");
         }
-
+        Log.e(TAG, "REJECTING INVITE SID = " + callInvite.getCallSid());
         callInvite.reject(this.context);
+        status = "callDisconnected";
         this.activeCall = null;
         this.callInvite = null;
         this.fromDisplayName = null;
@@ -482,6 +483,18 @@ public class TwilioUtils {
 
     public void clearActiveCall() {
         this.activeCall = null;
+        this.callInvite = null;
+    }
+
+    public void setCallInvite(CallInvite invite) {
+        this.callInvite = invite;
+    }
+
+    public CallInvite getCallInvite() {
+        return this.callInvite;
+    }
+
+    public void clearCallInvite() {
         this.callInvite = null;
     }
 }
