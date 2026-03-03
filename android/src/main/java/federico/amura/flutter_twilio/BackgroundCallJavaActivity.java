@@ -729,11 +729,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             @Override
             public void onConnected(@NonNull Call call) {
                 Log.d("TWILIO", "Call connected. Saving active call.");
-
-                // 🔥 STORE ACTIVE CALL
-                TwilioUtils.getInstance(getApplicationContext())
-                        .setActiveCall(call);
-
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 stopServiceIncomingCall();
                 updateCallDetails();
@@ -752,10 +747,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             @Override
             public void onDisconnected(@NonNull Call call, @Nullable CallException callException) {
                 Log.d("TWILIO", "Call disconnected. Clearing active call.");
-
-                TwilioUtils.getInstance(getApplicationContext())
-                        .setActiveCall(null);
-
                 TwilioUtils.getInstance(getApplicationContext())
                         .clearCallInvite();
 
