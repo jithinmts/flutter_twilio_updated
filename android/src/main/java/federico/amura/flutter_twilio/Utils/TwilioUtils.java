@@ -43,8 +43,8 @@ public class TwilioUtils {
         return instance;
     }
 
-    private Call activeCall;
-    private CallInvite callInvite;
+    private static Call activeCall;
+    private static CallInvite callInvite;
     private String fromDisplayName;
     private String toDisplayName;
     private Context context;
@@ -108,7 +108,7 @@ public class TwilioUtils {
     }
 
     public void makeCall(String to, Map<String, Object> data, Call.Listener listener) {
-        if (this.activeCall != null) {
+        if (activeCall != null) {
             throw new RuntimeException("There is a call in progress");
         }
 
@@ -143,56 +143,55 @@ public class TwilioUtils {
         }
 
         this.status = "callConnecting";
-        this.callInvite = null;
+        callInvite = null;
         this.fromDisplayName = fromDisplayName;
         this.toDisplayName = toDisplayName;
-        this.activeCall = Voice.connect(this.context, connectOptions, getCallListener(listener));
+        activeCall = Voice.connect(this.context, connectOptions, getCallListener(listener));
         }
 
     public void sendDigits(String digit) {
-        if (this.activeCall != null) {
+        if (activeCall != null) {
             Log.i(TAG, "sending digit: " + digit);
-            this.activeCall.sendDigits(digit);
+            activeCall.sendDigits(digit);
             Log.i(TAG, "digit sent: ");
         } else {
             Log.i(TAG, "Error sending digits, no active call");
         }
     }
 
-    public void acceptInvite(CallInvite callInvite, Call.Listener listener) {
+    public void acceptInvite(CallInvite invite, Call.Listener listener) {
         SoundUtils.getInstance(this.context).stopRinging();
-       Log.e(TAG, "onCallInvite:" + callInvite.getCallSid());
-        String from = callInvite.getFrom();
-        Log.e(TAG, "tw_from:" + from);
-        if (this.activeCall != null) {
+
+        if (activeCall != null) {
             throw new RuntimeException("There is a call in progress");
         }
-        if (callInvite == null) {
+        if (invite == null) {
             throw new RuntimeException("No call invite");
         }
 
         this.status = "callConnecting";
         this.fromDisplayName = null;
         this.toDisplayName = null;
-        this.callInvite = callInvite;
-        this.activeCall = callInvite.accept(this.context, getCallListener(listener));
+
+        callInvite = invite;
+        activeCall = invite.accept(this.context, getCallListener(listener));
     }
 
-    public void rejectInvite(CallInvite callInvite) {
-        if (callInvite == null) {
+    public void rejectInvite(CallInvite invite) {
+        if (invite == null) {
             throw new RuntimeException("No call invite");
         }
-        Log.e(TAG, "REJECTING INVITE SID = " + callInvite.getCallSid());
-        callInvite.reject(this.context);
+        Log.e(TAG, "REJECTING INVITE SID = " + invite.getCallSid());
+        invite.reject(this.context);
         status = "callDisconnected";
-        this.activeCall = null;
-        this.callInvite = null;
+        activeCall = null;
+        callInvite = null;
         this.fromDisplayName = null;
         this.toDisplayName = null;
         SoundUtils.getInstance(this.context).playDisconnect();
     }
 
-    public synchronized void disconnect() {
+    public static synchronized void disconnect() {
         if (activeCall != null) {
             Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
             activeCall.disconnect();
@@ -202,25 +201,25 @@ public class TwilioUtils {
     }
 
     public boolean toggleMute() {
-        if (this.activeCall == null) {
+        if (activeCall == null) {
             throw new RuntimeException("No active call");
         }
 
-        boolean mute = !this.activeCall.isMuted();
-        this.activeCall.mute(mute);
+        boolean mute = !activeCall.isMuted();
+        activeCall.mute(mute);
         return mute;
     }
 
     public boolean isMuted() {
-        if (this.activeCall == null) {
+        if (activeCall == null) {
             throw new RuntimeException("No active call");
         }
 
-        return this.activeCall.isMuted();
+        return activeCall.isMuted();
     }
 
     public boolean toggleSpeaker() {
-        if (this.activeCall == null) {
+        if (activeCall == null) {
             throw new RuntimeException("No active call");
         }
         AudioManager audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
@@ -259,7 +258,7 @@ public class TwilioUtils {
     }
 
     public void setSpeaker(boolean speaker) {
-        if (this.activeCall == null) {
+        if (activeCall == null) {
             throw new RuntimeException("No active call");
         }
 
@@ -285,13 +284,13 @@ public class TwilioUtils {
     }
 
     public Call getActiveCall() {
-        return this.activeCall;
+        return activeCall;
     }
 
     public HashMap<String, Object> getCallDetails() {
         HashMap<String, Object> map = new HashMap<>();
 
-        if (this.activeCall == null) {
+        if (activeCall == null) {
             map.put("id", "");
             map.put("mute", false);
             map.put("speaker", false);
@@ -301,13 +300,13 @@ public class TwilioUtils {
             map.put("speaker", isSpeaker());
         }
 
-        if (this.callInvite != null) {
-            map.put("customParameters", this.callInvite.getCustomParameters());
+        if (callInvite != null) {
+            map.put("customParameters", callInvite.getCustomParameters());
         }
 
         map.put("fromDisplayName", this.getFromDisplayName());
         map.put("toDisplayName", this.getToDisplayName());
-        map.put("outgoing", this.callInvite == null);
+        map.put("outgoing", callInvite == null);
         map.put("status", this.status);
         return map;
     }
@@ -315,7 +314,7 @@ public class TwilioUtils {
     private String getFromDisplayName() {
         String result = null;
 
-        if (this.callInvite != null) {
+        if (callInvite != null) {
             for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
                 if (entry.getKey().equals("fromDisplayName")) {
                     result = entry.getValue();
@@ -323,7 +322,7 @@ public class TwilioUtils {
             }
 
             if (result == null || result.trim().isEmpty()) {
-                final String contactName = PreferencesUtils.getInstance(context).findContactName(this.callInvite.getFrom());
+                final String contactName = PreferencesUtils.getInstance(context).findContactName(callInvite.getFrom());
                 if (contactName != null && !contactName.trim().isEmpty()) {
                     result = contactName;
                 }
@@ -342,7 +341,7 @@ public class TwilioUtils {
     private String getToDisplayName() {
         String result = null;
 
-        if (this.callInvite != null) {
+        if (callInvite != null) {
             for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
                 if (entry.getKey().equals("toDisplayName")) {
                     result = entry.getValue();
@@ -350,7 +349,7 @@ public class TwilioUtils {
             }
 
             if (result == null || result.trim().isEmpty()) {
-                final String contactName = PreferencesUtils.getInstance(context).findContactName(this.callInvite.getTo());
+                final String contactName = PreferencesUtils.getInstance(context).findContactName(callInvite.getTo());
                 if (contactName != null && !contactName.trim().isEmpty()) {
                     result = contactName;
                 }
@@ -368,7 +367,7 @@ public class TwilioUtils {
 
 
     public String getCallStatus() {
-        if (this.activeCall == null) return null;
+        if (activeCall == null) return null;
         return this.status;
     }
 
@@ -477,19 +476,19 @@ public class TwilioUtils {
     }
 
     public void clearActiveCall() {
-        this.activeCall = null;
-        this.callInvite = null;
+        activeCall = null;
+        callInvite = null;
     }
 
     public void setCallInvite(CallInvite invite) {
-        this.callInvite = invite;
+        callInvite = invite;
     }
 
     public CallInvite getCallInvite() {
-        return this.callInvite;
+        return callInvite;
     }
 
     public void clearCallInvite() {
-        this.callInvite = null;
+        callInvite = null;
     }
 }
