@@ -194,18 +194,10 @@ public class TwilioUtils {
     public synchronized void disconnect() {
         if (activeCall != null) {
             Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
-            Call call = activeCall;
-            activeCall = null;
-
-            try {
-                call.disconnect();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            activeCall.disconnect();
         } else {
             Log.e(TAG, "DISCONNECT called but activeCall is null");
         }
-
     }
 
     public boolean toggleMute() {
@@ -459,12 +451,12 @@ public class TwilioUtils {
                     listener.onDisconnected(call, e);
                 }
 
-                if (e != null) {
+               /* if (e != null) {
                     e.printStackTrace();
                     Log.i(TAG, "onDisconnected. Error: " + e.getMessage());
                 } else {
                     Log.i(TAG, "onDisconnected");
-                }
+                }*/
             }
 
             @Override
