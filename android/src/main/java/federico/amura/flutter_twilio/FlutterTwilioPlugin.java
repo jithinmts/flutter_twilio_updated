@@ -172,7 +172,7 @@ public class FlutterTwilioPlugin implements
                 try {
                     String to = call.argument("to");
                     Map<String, Object> data = call.argument("data");
-                    twilioUtils.makeCall(to, data, getCallListener());
+                    twilioUtils.makeCall(to, data);
                     responseChannel.invokeMethod("callConnecting", twilioUtils.getCallDetails());
                     result.success(twilioUtils.getCallDetails());
                 } catch (Exception exception) {
