@@ -409,16 +409,26 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
         if (this.callInvite != null) {
             try {
-                this.callInvite.reject(this);
+                this.callInvite.reject(this);   // ✅ only reject invite
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
 
-        // ADD THIS — important safety cleanup
-        TwilioUtils.getInstance(this).disconnect();
+        closeWithoutDisconnect();
+    }
 
-        this.close();
+    private void closeWithoutDisconnect() {
+        if (this.exited) return;
+        this.exited = true;
+
+        if (this.wakeLock != null && this.wakeLock.isHeld()) {
+            this.wakeLock.release();
+        }
+
+        this.stopTimer();
+        handler.removeCallbacks(runnable);
+        finish();
     }
 
 
@@ -429,17 +439,11 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             exception.printStackTrace();
         }
 
-        this.close();
+        closeWithoutDisconnect();
     }
 
     private void onCallCanceled() {
-        try {
-            TwilioUtils.getInstance(getApplicationContext()).disconnect();
-        } catch (Exception exception) {
-            exception.printStackTrace();
-        }
-
-        this.close();
+        closeWithoutDisconnect();
     }
 
     private void toggleMute() {
@@ -642,22 +646,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         Log.e("*TwilioCallCloseMethod******", "....01");
         if (this.exited) return;
         this.exited = true;
-        Log.e("*TwilioCallCloseMethod******", "....02");
-        try {
-            if (TwilioUtils.getInstance(getApplicationContext()).getActiveCall() != null) {
-                Log.e("*TwilioCallCloseMethod******", "....03");
-                TwilioUtils.getInstance(getApplicationContext()).disconnect();
-            }
-        } catch (Exception e) {
-            Log.e("*TwilioCallCloseMethod******", "....04");
-
-            e.printStackTrace();
-        }
 
         if (this.wakeLock != null && this.wakeLock.isHeld()) {
             this.wakeLock.release();
         }
-        Log.e("*TwilioCallCloseMethod******", "....05");
 
         this.stopTimer();
         handler.removeCallbacks(runnable);
@@ -741,7 +733,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             public void onDisconnected(@NonNull Call call, @Nullable CallException callException) {
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 updateCallDetails();
-                close();
+                closeWithoutDisconnect();
             }
         };
     }

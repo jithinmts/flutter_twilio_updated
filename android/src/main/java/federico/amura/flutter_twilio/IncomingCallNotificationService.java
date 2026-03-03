@@ -146,34 +146,38 @@ public class IncomingCallNotificationService extends Service {
         } catch (Exception exception) {
             exception.printStackTrace();
         }
+        stopSelf();
     }
 
     private void handleCancelledCall(Intent intent) {
-        try {
-            if (TwilioUtils.getInstance(this).getActiveCall() != null) {
-                TwilioUtils.getInstance(this).disconnect();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        SoundUtils.getInstance(this).stopRinging();
-        CancelledCallInvite cancelledCallInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
         Log.i(TAG, "Call canceled. App visible: " + isAppVisible() + ". Locked: " + isLocked());
 
-//        this.stopServiceIncomingCall();
+        // Stop ringtone immediately
+        SoundUtils.getInstance(this).stopRinging();
 
-//        if (cancelledCallInvite == null) return;
-//        if (cancelledCallInvite.getFrom() == null) return;
-//
-//        Log.i(TAG, "From: " + cancelledCallInvite.getFrom() + ". To: " + cancelledCallInvite.getTo());
-//        this.informAppCancelCall();
-        stopForeground(true);
-        Notification notification = NotificationUtils.createMissedCallNotification(getApplicationContext(), cancelledCallInvite, false);
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-        notificationManager.notify(100, notification);
-//       startForeground(TwilioConstants.NOTIFICATION_MISSED_CALL, notification);
-//        buildMissedCallNotification(cancelledCallInvite.getFrom(), cancelledCallInvite.getTo(),cancelledCallInvite);
+        // 🔥 DO NOT call disconnect() here
+        // Cancel means call was never connected
 
+        stopServiceIncomingCall();
+        stopSelf();
+
+        CancelledCallInvite cancelledCallInvite =
+                intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
+
+        if (cancelledCallInvite != null) {
+            Notification notification =
+                    NotificationUtils.createMissedCallNotification(
+                            getApplicationContext(),
+                            cancelledCallInvite,
+                            false
+                    );
+
+            NotificationManagerCompat
+                    .from(this)
+                    .notify(100, notification);
+        }
+
+        // Inform Flutter layer
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
