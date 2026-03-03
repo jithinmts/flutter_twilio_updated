@@ -743,9 +743,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             @Override
             public void onDisconnected(@NonNull Call call, @Nullable CallException callException) {
                 Log.d("TWILIO", "Call disconnected. Clearing active call.");
-                TwilioUtils.getInstance(getApplicationContext())
-                        .clearCallInvite();
-
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 updateCallDetails();
                 closeWithoutDisconnect();

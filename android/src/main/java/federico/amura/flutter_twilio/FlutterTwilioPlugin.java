@@ -422,9 +422,6 @@ public class FlutterTwilioPlugin implements
 
                 Log.d(TAG, call.getState().toString());
 
-                // 🔥 IMPORTANT: ensure activeCall cleared
-                TwilioUtils.getInstance(context).clearActiveCall();
-
                 responseChannel.invokeMethod("callDisconnected", null);
             }
 

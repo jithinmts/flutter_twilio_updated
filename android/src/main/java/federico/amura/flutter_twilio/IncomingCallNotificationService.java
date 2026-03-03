@@ -190,9 +190,6 @@ public class IncomingCallNotificationService extends Service {
             Log.e(TAG, "Reject failed: invite from intent is null");
         }
 
-        // Clear stored invite
-        TwilioUtils.getInstance(this).clearCallInvite();
-
         stopSelf();
     }
 
@@ -206,7 +203,7 @@ public class IncomingCallNotificationService extends Service {
         // Cancel means call was never connected
 
         stopServiceIncomingCall();
-        TwilioUtils.getInstance(this).clearCallInvite();
+
         stopSelf();
 
         CancelledCallInvite cancelledCallInvite =

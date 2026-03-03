@@ -447,15 +447,14 @@ public class TwilioUtils {
                 callInvite = null;
                 fromDisplayName = null;
                 toDisplayName = null;
+                if (listener != null) {
+                    listener.onDisconnected(call, e);
+                }
                 if (e != null) {
                     e.printStackTrace();
                     Log.i(TAG, "onDisconnected. Error: " + e.getMessage());
                 } else {
                     Log.i(TAG, "onDisconnected");
-                }
-
-                if (listener != null) {
-                    listener.onDisconnected(call, e);
                 }
             }
 
@@ -475,20 +474,11 @@ public class TwilioUtils {
         };
     }
 
-    public void clearActiveCall() {
-        activeCall = null;
-        callInvite = null;
-    }
-
     public void setCallInvite(CallInvite invite) {
         callInvite = invite;
     }
 
     public CallInvite getCallInvite() {
         return callInvite;
-    }
-
-    public void clearCallInvite() {
-        callInvite = null;
     }
 }

@@ -60,8 +60,6 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
                 @Override
                 public void onCancelledCallInvite(@NonNull CancelledCallInvite cancelledCallInvite, @Nullable CallException callException) {
                     Log.e("********Twilio ", "onCancelledCallInvite");
-                    TwilioUtils.getInstance(getApplicationContext())
-                            .clearCallInvite();
                     handleCanceledCallInvite(cancelledCallInvite);
                 }
             });
