@@ -425,36 +425,23 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             e.printStackTrace();
         }
 
-        closeWithoutDisconnect();
+        runOnUiThread(() -> close());
     }
-
-    private void closeWithoutDisconnect() {
-        if (this.exited) return;
-        this.exited = true;
-
-        if (this.wakeLock != null && this.wakeLock.isHeld()) {
-            this.wakeLock.release();
-        }
-
-        this.stopTimer();
-        handler.removeCallbacks(runnable);
-        finish();
-    }
-
 
     private void hangUp() {
         try {
-            TwilioUtils.getInstance(getApplicationContext()).disconnect();
+            TwilioUtils utils = TwilioUtils.getInstance(getApplicationContext());
 
+            if (utils.getActiveCall() != null) {
+                utils.disconnect();
+            }
         } catch (Exception exception) {
             exception.printStackTrace();
         }
-
-        closeWithoutDisconnect();
     }
 
     private void onCallCanceled() {
-        closeWithoutDisconnect();
+        runOnUiThread(() -> close());
     }
 
     private void toggleMute() {
@@ -746,7 +733,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 Log.d("TWILIO", "Call disconnected. Clearing active call.");
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 updateCallDetails();
-                closeWithoutDisconnect();
+                runOnUiThread(() -> close());
             }
         };
     }
