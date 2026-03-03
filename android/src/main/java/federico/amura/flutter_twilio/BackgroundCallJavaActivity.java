@@ -163,6 +163,15 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onDestroy() {
+        TwilioUtils twilio = TwilioUtils.getInstance(getApplicationContext());
+
+        CallInvite invite = twilio.getCallInvite();
+
+        if (invite != null) {
+            Log.e(TAG, "Activity destroyed. Rejecting pending invite.");
+            twilio.rejectInvite(invite);
+        }
+
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
         }
@@ -395,7 +404,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             containerIncomingCall.setVisibility(View.GONE);
 
             TwilioUtils.getInstance(getApplicationContext())
-                    .acceptInvite(this.callInvite);
+                    .acceptInvite(this.callInvite, getListener());
         } catch (Exception exception) {
             exception.printStackTrace();
             this.close();
@@ -698,6 +707,50 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.textTimer.setVisibility(View.GONE);
     }
 
+
+    Call.Listener getListener() {
+        return new Call.Listener() {
+            @Override
+            public void onConnectFailure(@NonNull Call call, @NonNull CallException callException) {
+                SoundUtils.getInstance(getApplicationContext()).stopRinging();
+                updateCallDetails();
+                close();
+            }
+
+            @Override
+            public void onRinging(@NonNull Call call) {
+                updateCallDetails();
+            }
+
+            @Override
+            public void onConnected(@NonNull Call call) {
+                Log.d("TWILIO", "Call connected. Saving active call.");
+                SoundUtils.getInstance(getApplicationContext()).stopRinging();
+                stopServiceIncomingCall();
+                updateCallDetails();
+            }
+
+            @Override
+            public void onReconnecting(@NonNull Call call, @NonNull CallException callException) {
+                updateCallDetails();
+            }
+
+            @Override
+            public void onReconnected(@NonNull Call call) {
+                updateCallDetails();
+            }
+
+            @Override
+            public void onDisconnected(@NonNull Call call, @Nullable CallException callException) {
+                Log.d("TWILIO", "Call disconnected. Clearing active call.");
+                SoundUtils.getInstance(getApplicationContext()).stopRinging();
+                updateCallDetails();
+                closeWithoutDisconnect();
+            }
+        };
+    }
+
+
     private static class CustomBroadCastReceiver extends BroadcastReceiver {
 
         private final BackgroundCallJavaActivity activity;
@@ -741,7 +794,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         notificationManager.cancel(100);
         try {
             Log.e(TAG, "*******************************************122" + callInvite.getTo().replace("client:", ""));
-            TwilioUtils.getInstance(getApplicationContext()).makeCall(callInvite.getFrom(), data);
+            TwilioUtils.getInstance(getApplicationContext()).makeCall(callInvite.getFrom(), data, getListener());
             Log.e(TAG, "*******************************************222" + callInvite.getFrom());
         } catch (Exception exception) {
             Log.e(TAG, "*******************************************212");

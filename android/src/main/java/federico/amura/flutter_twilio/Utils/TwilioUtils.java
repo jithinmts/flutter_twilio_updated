@@ -107,7 +107,7 @@ public class TwilioUtils {
         });
     }
 
-    public void makeCall(String to, Map<String, Object> data) {
+    public void makeCall(String to, Map<String, Object> data, Call.Listener listener) {
         if (activeCall != null) {
             throw new RuntimeException("There is a call in progress");
         }
@@ -159,7 +159,7 @@ public class TwilioUtils {
         }
     }
 
-    public void acceptInvite(CallInvite invite) {
+    public void acceptInvite(CallInvite invite, Call.Listener listener) {
         SoundUtils.getInstance(this.context).stopRinging();
 
         if (activeCall != null) {
@@ -371,6 +371,7 @@ public class TwilioUtils {
 
 
     public String getCallStatus() {
+        if (activeCall == null) return null;
         return this.status;
     }
 
