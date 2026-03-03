@@ -457,13 +457,14 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
 
     private void hangUp() {
-        TwilioUtils utils = TwilioUtils.getInstance(getApplicationContext());
-        utils.forceTerminateCall();
+        new Thread(() -> {
 
-        new Handler(Looper.getMainLooper()).postDelayed(
-                this::closeWithoutDisconnect,
-                500
-        );
+            TwilioUtils.getInstance(getApplicationContext())
+                    .forceTerminateCall();
+
+            runOnUiThread(this::closeWithoutDisconnect);
+
+        }).start();
     }
 
     private void onCallCanceled() {

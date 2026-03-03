@@ -535,14 +535,25 @@ public class TwilioUtils {
     public void forceTerminateCall() {
         try {
             Log.i(TAG, "*******forceTerminateCall*******");
-            if (activeCall == null) return;
+            if (activeCall != null) {
 
-            Call call = activeCall;
+                Call call = activeCall;
 
-            activeCall = null;
-            callInvite = null;
-            status = "callDisconnected";
-            call.disconnect();
+                activeCall = null;
+
+                callInvite = null;
+                status = "callDisconnected";
+
+                // 🔥 IMPORTANT — wait for SDK teardown
+                call.disconnect();
+
+                // Give SDK time to close media transport
+                try {
+                    Thread.sleep(400);
+                } catch (Exception ignored) {
+                }
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
