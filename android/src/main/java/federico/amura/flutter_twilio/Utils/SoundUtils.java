@@ -2,7 +2,6 @@ package federico.amura.flutter_twilio.Utils;
 
 import android.content.Context;
 import android.media.AudioAttributes;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.VibrationEffect;
@@ -24,7 +23,6 @@ public class SoundUtils {
     private SoundUtils(Context context) {
         this.appContext = context.getApplicationContext();
         this.vibrator = (Vibrator) appContext.getSystemService(Context.VIBRATOR_SERVICE);
-        this.audioManager = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
     }
 
     public static synchronized SoundUtils getInstance(Context context) {
@@ -104,5 +102,29 @@ public class SoundUtils {
 
     public boolean isRinging() {
         return isRinging;
+    }
+
+    public synchronized void playDisconnect() {
+        try {
+            MediaPlayer mp = MediaPlayer.create(appContext, R.raw.disconnect);
+            if (mp == null) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                mp.setAudioAttributes(
+                        new AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                );
+            } else {
+                mp.setAudioStreamType(AudioManager.STREAM_NOTIFICATION);
+            }
+
+            mp.setOnCompletionListener(MediaPlayer::release);
+            mp.start();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

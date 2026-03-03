@@ -52,6 +52,7 @@ import federico.amura.flutter_twilio.Utils.PreferencesUtils;
 import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.Utils.TwilioUtils;
 import androidx.core.content.ContextCompat;
+import federico.amura.flutter_twilio.Utils.SoundUtils;
 
 public class BackgroundCallJavaActivity extends AppCompatActivity implements SensorEventListener {
 
