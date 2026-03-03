@@ -194,22 +194,19 @@ public class TwilioUtils {
     public void disconnect() {
         Log.e("*TwilioCalldisconnectMethod******", "....01");
         this.status = "callDisconnected";
+
         try {
             if (activeCall != null) {
-                Log.e("*TwilioCalldisconnectMethod******", "....02");
                 Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
                 activeCall.disconnect();
             }
         } catch (Exception e) {
-            Log.e("*TwilioCalldisconnectMethod******", "....03");
             Log.e(TAG, "disconnect error", e);
         }
 
         SoundUtils.getInstance(this.context).playDisconnect();
-        Log.e("*TwilioCalldisconnectMethod******", "....04");
 
         this.callInvite = null;
-        this.activeCall = null;
         this.fromDisplayName = null;
         this.toDisplayName = null;
     }
