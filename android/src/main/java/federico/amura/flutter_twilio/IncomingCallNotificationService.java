@@ -261,28 +261,21 @@ public class IncomingCallNotificationService extends Service {
 
     private void startServiceIncomingCall(CallInvite callInvite) {
         Log.e(TAG, "Start service incoming call");
-        if (callInvite == null) return;
-
-        if (TwilioUtils.getInstance(this).getActiveCall() != null) {
-            Log.i(TAG, "Already in active call");
-            return;
-        }
-
         SoundUtils.getInstance(this).playRinging();
-
-        Notification notification =
-                NotificationUtils.createIncomingCallNotification(
-                        getApplicationContext(),
-                        callInvite,
-                        true
-                );
-
-        startForeground(
-                TwilioConstants.NOTIFICATION_INCOMING_CALL,
-                notification,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ?
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0
-        );
+        Notification notification = NotificationUtils.createIncomingCallNotification(getApplicationContext(), callInvite, true);
+        //startForeground(TwilioConstants.NOTIFICATION_INCOMING_CALL, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                    TwilioConstants.NOTIFICATION_INCOMING_CALL,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            );
+        } else {
+            startForeground(
+                    TwilioConstants.NOTIFICATION_INCOMING_CALL,
+                    notification
+            );
+        }
     }
 
     private void stopServiceIncomingCall() {
@@ -313,6 +306,12 @@ public class IncomingCallNotificationService extends Service {
         Intent intent = new Intent();
         intent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
         intent.setAction(TwilioConstants.ACTION_ACCEPT);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    private void informAppCancelCall() {
+        Intent intent = new Intent();
+        intent.setAction(TwilioConstants.ACTION_CANCEL_CALL);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
