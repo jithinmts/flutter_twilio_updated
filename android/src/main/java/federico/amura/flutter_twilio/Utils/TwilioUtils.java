@@ -146,7 +146,7 @@ public class TwilioUtils {
         callInvite = null;
         this.fromDisplayName = fromDisplayName;
         this.toDisplayName = toDisplayName;
-        activeCall = Voice.connect(this.context, connectOptions, getCallListener());
+        activeCall = Voice.connect(this.context, connectOptions, getCallListener(listener));
         }
 
     public void sendDigits(String digit) {
@@ -174,7 +174,7 @@ public class TwilioUtils {
         this.toDisplayName = null;
 
         callInvite = invite;
-        activeCall = invite.accept(this.context, getCallListener());
+        activeCall = invite.accept(this.context, getCallListener(listener));
     }
 
     public void rejectInvite(CallInvite invite) {
@@ -192,15 +192,11 @@ public class TwilioUtils {
     }
 
     public static synchronized void disconnect() {
-        Log.e(TAG, "disconnect() called");
-        Log.e(TAG, "activeCall object = " + activeCall);
-
         if (activeCall != null) {
             Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
             activeCall.disconnect();
-            activeCall = null;
         } else {
-            Log.e(TAG, "DISCONNECT called but activeCall is NULL");
+            Log.e(TAG, "DISCONNECT called but activeCall is null");
         }
     }
 
@@ -375,7 +371,7 @@ public class TwilioUtils {
         return this.status;
     }
 
-    private Call.Listener getCallListener() {
+    private Call.Listener getCallListener(Call.Listener listener) {
         return new Call.Listener() {
             @Override
             public void onConnectFailure(@NonNull Call call, @NonNull CallException e) {
@@ -384,6 +380,9 @@ public class TwilioUtils {
                 Log.i(TAG, "onConnectFailure. Error: " + e.getMessage());
 
                 status = "callDisconnected";
+                if (listener != null) {
+                    listener.onConnectFailure(call, e);
+                }
 
                 activeCall = null;
             }
@@ -393,6 +392,10 @@ public class TwilioUtils {
                 Log.i(TAG, "onRinging");
                 status = "callRinging";
                 activeCall = call;
+
+                if (listener != null) {
+                    listener.onRinging(call);
+                }
             }
 
             @Override
@@ -406,6 +409,9 @@ public class TwilioUtils {
                 activeCall = call;
                 status = "callConnected";
 
+                if (listener != null) {
+                    listener.onConnected(call);
+                }
             }
 
             @Override
@@ -416,6 +422,9 @@ public class TwilioUtils {
                 activeCall = call;
                 status = "callReconnecting";
 
+                if (listener != null) {
+                    listener.onReconnecting(call, e);
+                }
             }
 
             @Override
@@ -423,6 +432,10 @@ public class TwilioUtils {
                 Log.i(TAG, "onReconnected");
                 activeCall = call;
                 status = "callReconnected";
+
+                if (listener != null) {
+                    listener.onReconnected(call);
+                }
             }
 
             @Override
@@ -434,7 +447,9 @@ public class TwilioUtils {
                 callInvite = null;
                 fromDisplayName = null;
                 toDisplayName = null;
-
+                if (listener != null) {
+                    listener.onDisconnected(call, e);
+                }
                 if (e != null) {
                     e.printStackTrace();
                     Log.i(TAG, "onDisconnected. Error: " + e.getMessage());
@@ -451,6 +466,10 @@ public class TwilioUtils {
             ) {
                 Log.i(TAG, "onCallQualityWarningsChanged");
                 activeCall = call;
+
+                if (listener != null) {
+                    listener.onCallQualityWarningsChanged(call, currentWarnings, previousWarnings);
+                }
             }
         };
     }
