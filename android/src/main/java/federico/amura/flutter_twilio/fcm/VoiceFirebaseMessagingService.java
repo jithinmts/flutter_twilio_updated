@@ -42,6 +42,7 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
      */
     @Override
     public void onMessageReceived(final RemoteMessage remoteMessage) {
+        if (remoteMessage == null || remoteMessage.getData() == null) return;
         Log.e(TAG, "Received onMessageReceived()");
         Log.e(TAG, "Bundle data: " + remoteMessage.getData());
         Log.e(TAG, "From: " + remoteMessage.getFrom());
@@ -77,15 +78,19 @@ public class VoiceFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void handleInvite(CallInvite callInvite) {
-        try{
+        try {
+
+            if (TwilioUtils.getInstance(getApplicationContext()).getActiveCall() != null) {
+                return;
+            }
+
             Intent intent = new Intent(this, IncomingCallNotificationService.class);
             intent.setAction(TwilioConstants.ACTION_INCOMING_CALL);
             intent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
 
-            Log.d("Twilio getCallSid 1", callInvite.getCallSid());
-           // startService(intent);
             ContextCompat.startForegroundService(this, intent);
-        }catch (Exception e){
+
+        } catch (Exception e) {
             Log.e("***Twilio exception ", e.toString());
         }
 

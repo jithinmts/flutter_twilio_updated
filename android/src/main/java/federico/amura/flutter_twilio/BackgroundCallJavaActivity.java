@@ -51,7 +51,9 @@ import java.util.TimerTask;
 import federico.amura.flutter_twilio.Utils.PreferencesUtils;
 import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.Utils.TwilioUtils;
+
 import androidx.core.content.ContextCompat;
+
 import federico.amura.flutter_twilio.Utils.SoundUtils;
 
 public class BackgroundCallJavaActivity extends AppCompatActivity implements SensorEventListener {
@@ -183,43 +185,44 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onResume() {
-
-        handler.postDelayed(runnable = new Runnable() {
-            public void run() {
-                handler.postDelayed(runnable, delay);
-                try {
-
-                    if (callInvite != null) {
-                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!");
-                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!!" + sharedPreferencesContactData.getString(callInvite.getFrom(), "") + "!");
-                        String name = sharedPreferencesContactData.getString(callInvite.getFrom(), "");
-
-                        textDisplayName.setText(name);
-                        if (!name.equals("") || !name.equals(callInvite.getFrom())) {
-
-                            handler.removeCallbacks(runnable);
-                        }
-                    } else {
-                        String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
-
-                        textDisplayName.setText(name);
-                        if (!name.equals("") || !name.equals(callInvite2.getFrom())) {
-
-                            handler.removeCallbacks(runnable);
-                        }
-                    }
-                } catch (Exception e) {
-                    Log.d(TAG, e.toString());
-                }
-            }
-        }, delay);
         super.onResume();
-        this.sensorManager.registerListener(this, this.sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        handler.removeCallbacksAndMessages(null);
+
+        runnable = () -> {
+            try {
+                if (callInvite != null) {
+                    String name = sharedPreferencesContactData.getString(callInvite.getFrom(), "");
+
+                    textDisplayName.setText(name);
+
+                    if (!name.isEmpty() || !name.equals(callInvite.getFrom())) {
+                        return;
+                    }
+                } else if (callInvite2 != null) {
+                    String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
+
+                    textDisplayName.setText(name);
+
+                    if (!name.isEmpty() || !name.equals(callInvite2.getFrom())) {
+                        return;
+                    }
+                }
+            } catch (Exception e) {
+                Log.d(TAG, e.toString());
+            }
+
+            handler.postDelayed(runnable, delay);
+        };
+
+        handler.postDelayed(runnable, delay);
+
+        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        handler.removeCallbacksAndMessages(null);
         sensorManager.unregisterListener(this);
     }
 
@@ -429,15 +432,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void hangUp() {
-        try {
-            TwilioUtils utils = TwilioUtils.getInstance(getApplicationContext());
-
-            if (utils.getActiveCall() != null) {
-                utils.disconnect();
-            }
-        } catch (Exception exception) {
-            exception.printStackTrace();
-        }
+        TwilioUtils.getInstance(getApplicationContext()).disconnect();
+        runOnUiThread(() -> close());
     }
 
     private void onCallCanceled() {
@@ -642,18 +638,36 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void close() {
         Log.e("*TwilioCallCloseMethod******", "....01");
-        if (this.exited) return;
-        this.exited = true;
 
-        if (this.wakeLock != null && this.wakeLock.isHeld()) {
-            this.wakeLock.release();
+        if (exited) return;
+        exited = true;
+
+        try {
+            NotificationManagerCompat.from(getApplicationContext())
+                    .cancelAll();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        this.stopTimer();
-        handler.removeCallbacks(runnable);
-        finish();
+        SoundUtils.getInstance(getApplicationContext()).stopRinging();
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
+
+        handler.removeCallbacksAndMessages(null);
+
+        stopTimer();
+        broadcastCloseCall();
+        finishAndRemoveTask();
     }
 
+
+    private void broadcastCloseCall() {
+        Intent intent = new Intent();
+        intent.setAction(TwilioConstants.ACTION_CANCEL_CALL);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
     @Override
     public void finish() {
         this.stopTimer();
