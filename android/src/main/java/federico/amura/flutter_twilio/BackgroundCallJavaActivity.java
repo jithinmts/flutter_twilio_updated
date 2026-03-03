@@ -85,7 +85,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     Handler handler = new Handler();
     Runnable runnable;
     int delay = 1000;
-
+    private volatile boolean activityDestroyed = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -163,12 +163,13 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onDestroy() {
+        activityDestroyed = true;
+
         TwilioUtils twilio = TwilioUtils.getInstance(getApplicationContext());
 
         CallInvite invite = twilio.getCallInvite();
 
         if (invite != null) {
-            Log.e(TAG, "Activity destroyed. Rejecting pending invite.");
             twilio.rejectInvite(invite);
         }
 
@@ -177,6 +178,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
 
         unregisterReceiver();
+
+        handler.removeCallbacksAndMessages(null);
+        stopTimer();
+
         super.onDestroy();
     }
 
@@ -184,37 +189,44 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     @Override
     protected void onResume() {
 
-        handler.postDelayed(runnable = new Runnable() {
+        super.onResume();
+
+        handler.removeCallbacksAndMessages(null);
+
+        runnable = new Runnable() {
+            @Override
             public void run() {
-                handler.postDelayed(runnable, delay);
+
+                if (activityDestroyed || isFinishing()) return;
+
                 try {
 
                     if (callInvite != null) {
-                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!");
-                        Log.e("*Twilio*", "sharedPreferencesContactData !!!!!" + sharedPreferencesContactData.getString(callInvite.getFrom(), "") + "!");
+
                         String name = sharedPreferencesContactData.getString(callInvite.getFrom(), "");
 
                         textDisplayName.setText(name);
-                        if (!name.equals("") || !name.equals(callInvite.getFrom())) {
 
-                            handler.removeCallbacks(runnable);
-                        }
-                    } else {
+                    } else if (callInvite2 != null) {
+
                         String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
 
                         textDisplayName.setText(name);
-                        if (!name.equals("") || !name.equals(callInvite2.getFrom())) {
-
-                            handler.removeCallbacks(runnable);
-                        }
                     }
+
                 } catch (Exception e) {
                     Log.d(TAG, e.toString());
                 }
+
+                if (!activityDestroyed && !isFinishing() && !exited) {
+                    handler.postDelayed(this, delay);
+                }
             }
-        }, delay);
-        super.onResume();
-        this.sensorManager.registerListener(this, this.sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        };
+
+        handler.postDelayed(runnable, delay);
+
+        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
@@ -429,26 +441,23 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void closeWithoutDisconnect() {
-        if (this.exited) return;
-        this.exited = true;
+        if (exited || isFinishing() || activityDestroyed) return;
 
-        if (this.wakeLock != null && this.wakeLock.isHeld()) {
-            this.wakeLock.release();
+        exited = true;
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
         }
 
-        this.stopTimer();
-        handler.removeCallbacks(runnable);
+        stopTimer();
+        handler.removeCallbacksAndMessages(null);
+
         finish();
     }
 
 
     private void hangUp() {
-        try {
-            TwilioUtils.disconnect();
-        } catch (Exception exception) {
-            exception.printStackTrace();
-        }
-
+        TwilioUtils.getInstance(getApplicationContext()).forceTerminateCall();
         closeWithoutDisconnect();
     }
 
@@ -654,16 +663,24 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void close() {
         Log.e("*TwilioCallCloseMethod******", "....01");
-        if (this.exited) return;
-        this.exited = true;
+        if (exited || isFinishing() || activityDestroyed) return;
 
-        if (this.wakeLock != null && this.wakeLock.isHeld()) {
-            this.wakeLock.release();
+        exited = true;
+
+        handler.removeCallbacksAndMessages(null);
+
+        stopTimer();
+
+        NotificationManagerCompat.from(getApplicationContext()).cancelAll();
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
         }
 
-        this.stopTimer();
-        handler.removeCallbacks(runnable);
-        finish();
+        try {
+            finishAffinity();
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -745,7 +762,11 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 Log.d("TWILIO", "Call disconnected. Clearing active call.");
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 updateCallDetails();
-                closeWithoutDisconnect();
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !activityDestroyed) {
+                        closeWithoutDisconnect();
+                    }
+                });
             }
         };
     }
@@ -755,12 +776,13 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
         private final BackgroundCallJavaActivity activity;
 
-        private CustomBroadCastReceiver(BackgroundCallJavaActivity activity) {
-            this.activity = activity;
+        private CustomBroadCastReceiver(BackgroundCallJavaActivity act) {
+            activity = act;
         }
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            if (activity == null || activity.isFinishing()) return;
             String action = intent.getAction();
             Log.d(TAG, "Received broadcast for action " + action);
 

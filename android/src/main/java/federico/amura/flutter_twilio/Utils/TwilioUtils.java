@@ -192,12 +192,20 @@ public class TwilioUtils {
     }
 
     public static synchronized void disconnect() {
-        if (activeCall != null) {
-            Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
-            activeCall.disconnect();
-        } else {
-            Log.e(TAG, "DISCONNECT called but activeCall is null");
-        }
+        Log.e(TAG, "INSIDE DISCONNECT");
+        if (activeCall == null) return;
+
+        Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
+
+        Call call = activeCall;
+
+        activeCall = null;
+        callInvite = null;
+        fromDisplayName = null;
+        toDisplayName = null;
+        status = "callDisconnected";
+
+        call.disconnect();
     }
 
     public boolean toggleMute() {
@@ -381,6 +389,13 @@ public class TwilioUtils {
 
                 status = "callDisconnected";
                 if (listener != null) {
+                    if (context instanceof BackgroundCallJavaActivity) {
+                        BackgroundCallJavaActivity activity =
+                                (BackgroundCallJavaActivity) context;
+
+                        if (activity.isFinishing() || activity.isDestroyed()) return;
+                    }
+
                     listener.onConnectFailure(call, e);
                 }
 
@@ -394,6 +409,13 @@ public class TwilioUtils {
                 activeCall = call;
 
                 if (listener != null) {
+                    if (context instanceof BackgroundCallJavaActivity) {
+                        BackgroundCallJavaActivity activity =
+                                (BackgroundCallJavaActivity) context;
+
+                        if (activity.isFinishing()) return;
+                    }
+
                     listener.onRinging(call);
                 }
             }
@@ -410,6 +432,13 @@ public class TwilioUtils {
                 status = "callConnected";
 
                 if (listener != null) {
+                    if (context instanceof BackgroundCallJavaActivity) {
+                        BackgroundCallJavaActivity activity =
+                                (BackgroundCallJavaActivity) context;
+
+                        if (activity.isFinishing() || activity.isDestroyed()) return;
+                    }
+
                     listener.onConnected(call);
                 }
             }
@@ -423,6 +452,13 @@ public class TwilioUtils {
                 status = "callReconnecting";
 
                 if (listener != null) {
+                    if (context instanceof BackgroundCallJavaActivity) {
+                        BackgroundCallJavaActivity activity =
+                                (BackgroundCallJavaActivity) context;
+
+                        if (activity.isFinishing() || activity.isDestroyed()) return;
+                    }
+
                     listener.onReconnecting(call, e);
                 }
             }
@@ -434,6 +470,13 @@ public class TwilioUtils {
                 status = "callReconnected";
 
                 if (listener != null) {
+                    if (context instanceof BackgroundCallJavaActivity) {
+                        BackgroundCallJavaActivity activity =
+                                (BackgroundCallJavaActivity) context;
+
+                        if (activity.isFinishing() || activity.isDestroyed()) return;
+                    }
+
                     listener.onReconnected(call);
                 }
             }
@@ -448,6 +491,13 @@ public class TwilioUtils {
                 fromDisplayName = null;
                 toDisplayName = null;
                 if (listener != null) {
+                    if (context instanceof BackgroundCallJavaActivity) {
+                        BackgroundCallJavaActivity activity =
+                                (BackgroundCallJavaActivity) context;
+
+                        if (activity.isFinishing() || activity.isDestroyed()) return;
+                    }
+
                     listener.onDisconnected(call, e);
                 }
                 if (e != null) {
@@ -480,5 +530,23 @@ public class TwilioUtils {
 
     public CallInvite getCallInvite() {
         return callInvite;
+    }
+
+    public void forceTerminateCall() {
+        try {
+            Log.i(TAG, "*******forceTerminateCall*******");
+            if (activeCall != null) {
+                activeCall.disconnect();
+            }
+
+            activeCall = null;
+            callInvite = null;
+            fromDisplayName = null;
+            toDisplayName = null;
+            status = "callDisconnected";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
