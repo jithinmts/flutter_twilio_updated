@@ -193,16 +193,11 @@ public class TwilioUtils {
     }
 
     public synchronized void disconnect() {
-        Call call = activeCall;
-        activeCall = null;
-
-        try {
-            if (call != null) {
-                Log.e(TAG, "DISCONNECT SID = " + call.getSid());
-                call.disconnect();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "disconnect error", e);
+        if (activeCall != null) {
+            Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
+            activeCall.disconnect();
+        } else {
+            Log.e(TAG, "DISCONNECT called but activeCall is null");
         }
     }
 
