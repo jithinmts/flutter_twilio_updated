@@ -16,43 +16,42 @@ class FlutterTwilio {
   static const MethodChannel _eventChannel =
       MethodChannel('flutter_twilio_response');
 
-  static late StreamController<FlutterTwilioEvent> _streamController;
+  static late StreamController<FlutterTwilioEvent>? _streamController;
 
   static FlutterTwilioEvent? _event;
 
   static FlutterTwilioEvent? get event => _event;
 
   static void init() {
-    if (_streamController.isClosed) {
-      _streamController =
-      StreamController<FlutterTwilioEvent>.broadcast(onListen: () {
-        log("Twilio stream started");
-      }, onCancel: () {});
+    if (_streamController != null && !_streamController!.isClosed) {
+      return;
     }
+
+    _streamController = StreamController<FlutterTwilioEvent>.broadcast(
+      onListen: () => log("Twilio stream started"),
+    );
+
     _eventChannel.setMethodCallHandler((event) async {
       log("Call event: ${event.method} . Arguments: ${event.arguments}");
 
       try {
-        /// ⭐ Registration Failure Handling (ADD ONLY THIS PART)
         if (event.method == "registrationFailed") {
-          log("Twilio registration failed");
-
-          _streamController.add(
+          _streamController?.add(
             FlutterTwilioEvent(
               FlutterTwilioStatus.registerError,
               null,
             ),
           );
-
           return;
-        } else if (event.method == "registrationSuccess") {
-          _streamController.add(
+        }
+
+        if (event.method == "registrationSuccess") {
+          _streamController?.add(
             FlutterTwilioEvent(
               FlutterTwilioStatus.registerSuccess,
               null,
             ),
           );
-
           return;
         }
 
@@ -60,27 +59,25 @@ class FlutterTwilio {
 
         FlutterTwilioCall? call;
 
-        try {
-          if (event.arguments != null) {
+        if (event.arguments != null) {
+          try {
             call = FlutterTwilioCall.fromMap(
               Map<String, dynamic>.from(event.arguments),
             );
-          }
-        } catch (_) {}
+          } catch (_) {}
+        }
 
-        _streamController.add(
+        _streamController?.add(
           FlutterTwilioEvent(eventType, call),
         );
-      } catch (error, stack) {
-        log(
-          "Error parsing call event",
-          error: error,
-          stackTrace: stack,
-        );
+      } catch (e, stack) {
+        log("Twilio event error",
+            error: e,
+            stackTrace: stack);
       }
     });
 
-    _streamController.stream.listen((event) {
+    _streamController?.stream.listen((event) {
       _event = event;
     });
   }
@@ -98,13 +95,21 @@ class FlutterTwilio {
   }
 
   static Stream<FlutterTwilioEvent> get onCallEvent {
-    return _streamController.stream.asBroadcastStream();
+    if (_streamController == null) {
+      return const Stream.empty();
+    }
+    return _streamController!.stream.asBroadcastStream();
   }
 
   static Stream<FlutterTwilioEvent> get onCallConnecting {
-    return _streamController.stream
+    if (_streamController == null) {
+      return const Stream.empty();
+    }
+
+    return _streamController!.stream
         .asBroadcastStream()
-        .where((event) => event.status == FlutterTwilioStatus.connecting);
+        .where(
+            (event) => event.status == FlutterTwilioStatus.connecting);
   }
 
   static Future<FlutterTwilioCall> makeCall({
