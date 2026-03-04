@@ -53,7 +53,6 @@ import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.Utils.TwilioUtils;
 import androidx.core.content.ContextCompat;
 import federico.amura.flutter_twilio.Utils.SoundUtils;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class BackgroundCallJavaActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -191,9 +190,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     protected void onResume() {
 
         super.onResume();
-        LocalBroadcastManager.getInstance(this)
-                .registerReceiver(callReceiver,
-                        new IntentFilter(TwilioConstants.ACTION_CANCEL_CALL));
+
         handler.removeCallbacksAndMessages(null);
 
         runnable = new Runnable() {
@@ -235,8 +232,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     @Override
     protected void onPause() {
         super.onPause();
-        LocalBroadcastManager.getInstance(this)
-                .unregisterReceiver(callReceiver);
         sensorManager.unregisterListener(this);
     }
 
@@ -463,7 +458,12 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void hangUp() {
         try {
-            TwilioUtils.getInstance(getApplicationContext()).disconnect();
+
+            TwilioUtils.getInstance(getApplicationContext())
+                    .forceTerminateCall();
+
+            closeWithoutDisconnect();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -830,13 +830,4 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             this.close();
         }
     }
-
-    private BroadcastReceiver callReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (TwilioConstants.ACTION_CALL_DISCONNECTED.equals(intent.getAction())) {
-                finish();   // close activity safely
-            }
-        }
-    };
 }

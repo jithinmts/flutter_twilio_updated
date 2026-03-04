@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import federico.amura.flutter_twilio.Utils.SoundUtils;
-import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.IncomingCallNotificationService;
 import android.content.Intent;
 
@@ -445,11 +444,8 @@ public class TwilioUtils {
             public void onDisconnected(@NonNull Call call, CallException e) {
                 Log.i(TAG, "onDisconnected");
 
-                // Extra safety: ensure we're clearing correct call
-                if (activeCall == call) {
-                    activeCall = null;
-                }
-
+                // ⭐ NOW clear everything safely
+                activeCall = null;
                 callInvite = null;
                 fromDisplayName = null;
                 toDisplayName = null;
@@ -457,17 +453,10 @@ public class TwilioUtils {
 
                 SoundUtils.getInstance(context).stopRinging();
 
-                // ⭐ Notify UI to close
-                Intent intent = new Intent(TwilioConstants.ACTION_CALL_DISCONNECTED);
-                LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
-
-                try {
-                    context.stopService(
-                            new Intent(context, IncomingCallNotificationService.class)
-                    );
-                } catch (Exception ex) {
-                    Log.e(TAG, "Service stop failed", ex);
-                }
+                // ⭐ Stop service AFTER signaling finished
+                context.stopService(
+                        new Intent(context, IncomingCallNotificationService.class)
+                );
             }
 
             @Override
@@ -509,6 +498,13 @@ public class TwilioUtils {
 
                 call.disconnect();
             }
+
+            Voice.unregister(
+                    PreferencesUtils.getInstance(context).getAccessToken(),
+                    Voice.RegistrationChannel.FCM,
+                    PreferencesUtils.getInstance(context).getFcmToken(),
+                    null
+            );
 
             SoundUtils.getInstance(context).stopRinging();
 
