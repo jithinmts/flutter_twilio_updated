@@ -37,7 +37,6 @@ import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.squareup.picasso.Picasso;
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
@@ -630,10 +629,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             // Phone number
             this.textPhoneNumber.setText("");
         }
-
-
-        // Image
-       // Picasso.get().load("https://stonegatesl.com/wp-content/uploads/2021/01/avatar-300x300.jpg").into(this.image);
 
 
         // Timer
