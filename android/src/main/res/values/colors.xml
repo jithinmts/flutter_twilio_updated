@@ -21,5 +21,6 @@
 
     <color name="call_btn_fill">#2196F3</color>
     <color name="on_call_btn_fill">#FFFFFF</color>
-
+    <color name="light_blue_100">#BBDEFB</color>
+    <color name="blue">#2196F3</color>
 </resources>
