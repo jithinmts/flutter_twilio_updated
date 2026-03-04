@@ -17,8 +17,6 @@ public class PreferencesUtils {
     private SharedPreferences sharedPreferencesContactData;
     private SharedPreferences sharedPreferencesCallStyle;
     private Context context;
-
-    @SuppressLint("StaticFieldLeak")
     private static PreferencesUtils instance;
 
     private PreferencesUtils() {
@@ -28,12 +26,30 @@ public class PreferencesUtils {
     public static PreferencesUtils getInstance(Context context) {
         if (instance == null) {
             instance = new PreferencesUtils();
-            instance.sharedPreferencesAccess = context.getSharedPreferences(TwilioConstants.SHARED_PREFERENCES_ACCESS, Context.MODE_PRIVATE);
-            instance.sharedPreferencesContactData = context.getSharedPreferences(TwilioConstants.SHARED_PREFERENCES_CONTACT_DATA, Context.MODE_PRIVATE);
-            instance.sharedPreferencesCallStyle = context.getSharedPreferences(TwilioConstants.SHARED_PREFERENCES_CALL_STYLE, Context.MODE_PRIVATE);
+
+            Context appContext = context.getApplicationContext();
+
+            instance.sharedPreferencesAccess =
+                    appContext.getSharedPreferences(
+                            TwilioConstants.SHARED_PREFERENCES_ACCESS,
+                            Context.MODE_PRIVATE
+                    );
+
+            instance.sharedPreferencesContactData =
+                    appContext.getSharedPreferences(
+                            TwilioConstants.SHARED_PREFERENCES_CONTACT_DATA,
+                            Context.MODE_PRIVATE
+                    );
+
+            instance.sharedPreferencesCallStyle =
+                    appContext.getSharedPreferences(
+                            TwilioConstants.SHARED_PREFERENCES_CALL_STYLE,
+                            Context.MODE_PRIVATE
+                    );
+
+            instance.context = appContext; // ✅ use application context
         }
 
-        instance.context = context;
         return instance;
     }
 
@@ -41,24 +57,30 @@ public class PreferencesUtils {
     public void setContacts(Map<String, Object> data, String defaultDisplayName) {
         SharedPreferences.Editor editor = this.sharedPreferencesContactData.edit();
 
-        // Save default display name
         if (defaultDisplayName == null) defaultDisplayName = "";
-        editor.putString(TwilioConstants.SHARED_PREFERENCES_KEY_DEFAULT_DISPLAY_NAME, defaultDisplayName);
+        editor.putString(
+                TwilioConstants.SHARED_PREFERENCES_KEY_DEFAULT_DISPLAY_NAME,
+                defaultDisplayName
+        );
 
-        // Save contacts
         if (data != null) {
             int i = 0;
+
             for (Map.Entry<String, Object> keyValue : data.entrySet()) {
-                //noinspection unchecked
+
                 Map<String, Object> item = (Map<String, Object>) keyValue.getValue();
+
                 String phoneNumber = keyValue.getKey();
                 String displayName = (String) item.get("displayName");
+
                 if (displayName == null) displayName = "";
-                String photoURL = (String) item.get("photoURL");
-                if (photoURL == null) photoURL = "";
-                editor.putString(phoneNumber, displayName );
+
+                // ✅ Store in correct format
+                editor.putString(phoneNumber, displayName);
+
                 i++;
             }
+
             Log.e(TAG, "Saved " + i + " contacts");
         }
 
@@ -90,31 +112,6 @@ public class PreferencesUtils {
         } catch (Exception e) {
             Log.e(TAG, "Error finding the contact display name for " + phoneNumber + ". Error: " + e.getMessage());
             return defaultDisplayName;
-        }
-    }
-
-    public String findPhotoURL(String phoneNumber) {
-        if (phoneNumber == null || phoneNumber.trim().equals("")) {
-            Log.e(TAG, "Error finding the contact photo URL. No phone number");
-            return "";
-        }
-
-        final String value = this.sharedPreferencesContactData.getString(phoneNumber, null);
-        if (value == null || value.equals("")) {
-            Log.e(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". No value stored");
-            return "";
-        }
-
-        try {
-            final String[] parts = value.split(";");
-            if (parts.length < 2) {
-                Log.e(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". The stored value is wrong " + value + ". Contains " + parts.length + " parts.");
-                return "";
-            }
-            return parts[1];
-        } catch (Exception e) {
-            Log.e(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". Error: " + e.getMessage());
-            return "";
         }
     }
 
