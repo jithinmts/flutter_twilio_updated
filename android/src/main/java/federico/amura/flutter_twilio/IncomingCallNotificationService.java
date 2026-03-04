@@ -28,7 +28,7 @@ import com.twilio.voice.CancelledCallInvite;
 
 import java.util.List;
 import java.util.Map;
-import android.app.ServiceInfo;
+
 import federico.amura.flutter_twilio.Utils.AppForegroundStateUtils;
 import federico.amura.flutter_twilio.Utils.NotificationUtils;
 import federico.amura.flutter_twilio.Utils.PreferencesUtils;
@@ -198,7 +198,7 @@ public class IncomingCallNotificationService extends Service {
     private void handleCancelledCall(Intent intent) {
         Log.i(TAG, "Call canceled. App visible: " + isAppVisible() + ". Locked: " + isLocked());
         if (TwilioUtils.getInstance(this).getActiveCall() != null) {
-            TwilioUtils.disconnect();
+            TwilioUtils.getInstance(getApplicationContext()).disconnect();
         }
         // Stop ringtone immediately
         SoundUtils.getInstance(this).stopRinging();
@@ -371,7 +371,7 @@ public class IncomingCallNotificationService extends Service {
             SoundUtils.getInstance(this).stopRinging();
 
             if (TwilioUtils.getInstance(this).getActiveCall() != null) {
-                TwilioUtils.disconnect();
+                TwilioUtils.getInstance(getApplicationContext()).disconnect();
             }
 
             stopForeground(true);
