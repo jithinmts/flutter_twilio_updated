@@ -85,11 +85,12 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private boolean isTimerRunning = false;
 
     private SharedPreferences sharedPreferencesContactData;
-    Handler handler = new Handler();
+    Handler handler = new Handler(Looper.getMainLooper());
     Runnable runnable;
     int delay = 1000;
     private volatile boolean activityDestroyed = false;
     private long callConnectedTime = 0L;
+    private Call.Listener callListener;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +129,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         this.containerIncomingCall = findViewById(R.id.containerIncomingCall);
         this.containerIncomingCall.setVisibility(View.GONE);
 
+        callListener = getListener();
         CallManager manager = CallManager.getInstance();
 
         if (manager.isCallConnected) {
@@ -204,45 +206,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     @Override
     protected void onResume() {
-
         super.onResume();
-
-        handler.removeCallbacksAndMessages(null);
-
-        runnable = new Runnable() {
-            @Override
-            public void run() {
-
-                if (activityDestroyed || isFinishing()) return;
-
-                try {
-
-                    if (callInvite != null) {
-
-                        String name = sharedPreferencesContactData.getString(callInvite.getFrom(), "");
-
-                        textDisplayName.setText(name);
-
-                    } else if (callInvite2 != null) {
-
-                        String name = sharedPreferencesContactData.getString(callInvite2.getFrom(), "");
-
-                        textDisplayName.setText(name);
-                    }
-
-                } catch (Exception e) {
-                    Log.e(TAG, e.toString());
-                }
-
-                if (!activityDestroyed && !isFinishing() && !exited) {
-                    handler.postDelayed(this, delay);
-                }
-            }
-        };
-
-        handler.postDelayed(runnable, delay);
-
-        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        if (sensorManager != null && sensor != null) {
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        }
     }
 
     @Override
@@ -432,7 +399,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             containerIncomingCall.setVisibility(View.GONE);
 
             TwilioUtils.getInstance(getApplicationContext())
-                    .acceptInvite(this.callInvite, getListener());
+                    .acceptInvite(this.callInvite, callListener);
         } catch (Exception exception) {
             exception.printStackTrace();
             this.close();
@@ -537,7 +504,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void updateCallDetails() {
-
+        if (activityDestroyed || isFinishing()) return;
         HashMap<String, Object> call =
                 TwilioUtils.getInstance(getApplicationContext()).getCallDetails();
 
@@ -546,30 +513,17 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         // -------------------------
         // 1️⃣ Handle Call Status UI
         // -------------------------
-        if (status == null || status.trim().isEmpty()) {
+        if ("callConnected".equals(status)) {
+            textCallStatus.setVisibility(View.GONE);
+        } else if ("callRinging".equals(status)) {
+            textCallStatus.setVisibility(View.VISIBLE);
+            textCallStatus.setText(R.string.call_status_ringing);
+        } else if ("callReconnecting".equals(status)) {
+            textCallStatus.setVisibility(View.VISIBLE);
+            textCallStatus.setText(R.string.call_status_reconnecting);
+        } else {
             textCallStatus.setVisibility(View.VISIBLE);
             textCallStatus.setText(R.string.call_status_connecting);
-        } else {
-            switch (status) {
-
-                case "callRinging":
-                    textCallStatus.setVisibility(View.VISIBLE);
-                    textCallStatus.setText(R.string.call_status_ringing);
-                    break;
-
-                case "callReconnecting":
-                    textCallStatus.setVisibility(View.VISIBLE);
-                    textCallStatus.setText(R.string.call_status_reconnecting);
-                    break;
-
-                case "callConnected":
-                    textCallStatus.setVisibility(View.GONE);
-                    break;
-
-                default:
-                    textCallStatus.setVisibility(View.GONE);
-                    break;
-            }
         }
 
         // -------------------------
@@ -656,14 +610,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
     }
 
-    @Override
-    public void finish() {
-        this.stopTimer();
-        handler.removeCallbacks(runnable);
-        super.finish();
-    }
-
-
     private void startTimer() {
         if (isTimerRunning) return;
 
@@ -731,9 +677,16 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                     manager.callConnectedTime = System.currentTimeMillis();
                 }
 
+                if (manager.callConnectedTime == 0L) {
+                    manager.callConnectedTime = System.currentTimeMillis();
+                }
+
                 callConnectedTime = manager.callConnectedTime;
 
-                startTimer();
+                runOnUiThread(() -> {
+                    callConnectedTime = manager.callConnectedTime;
+                    startTimer();
+                });
 
                 stopServiceIncomingCall();
                 updateCallDetails();
@@ -813,7 +766,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         notificationManager.cancel(100);
         try {
             Log.e(TAG, "*******************************************122" + callInvite.getTo().replace("client:", ""));
-            TwilioUtils.getInstance(getApplicationContext()).makeCall(callInvite.getFrom(), data, getListener());
+            TwilioUtils.getInstance(getApplicationContext()).makeCall(callInvite.getFrom(), data, callListener);
             Log.e(TAG, "*******************************************222" + callInvite.getFrom());
         } catch (Exception exception) {
             Log.e(TAG, "*******************************************212");
