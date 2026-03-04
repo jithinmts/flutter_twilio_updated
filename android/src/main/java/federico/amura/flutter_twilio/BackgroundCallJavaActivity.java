@@ -620,11 +620,12 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             displayName = phoneNumber;
         }
 
-        textDisplayName.setText(displayName);
-
         // -------------------------
         // 4️⃣ Phone Number Visibility
         // -------------------------
+
+        textDisplayName.setVisibility(View.VISIBLE);
+        textDisplayName.setText(displayName);
 
         if (!phoneNumber.equals(displayName)) {
             textPhoneNumber.setVisibility(View.VISIBLE);
