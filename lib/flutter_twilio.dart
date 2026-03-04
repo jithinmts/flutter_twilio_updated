@@ -43,6 +43,15 @@ class FlutterTwilio {
           );
 
           return;
+        } else if (event.method == "registrationSuccess") {
+          _streamController.add(
+            FlutterTwilioEvent(
+              FlutterTwilioStatus.registerSuccess,
+              null,
+            ),
+          );
+
+          return;
         }
 
         final eventType = getEventType(event.method);
