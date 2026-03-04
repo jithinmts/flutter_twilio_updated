@@ -37,7 +37,6 @@ import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.squareup.picasso.Picasso;
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
@@ -574,19 +573,27 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
 
         // -------------------------
-        // 2️⃣ Get Active Call Invite
+        // 2️⃣ Get Invite Safely
         // -------------------------
-        CallInvite activeInvite =
-                (callInvite != null) ? callInvite : callInvite2;
 
-        if (activeInvite == null) {
+        String phoneNumber = null;
+        Map<String, String> params = null;
+
+        if (callInvite != null) {
+            phoneNumber = callInvite.getFrom();
+            params = callInvite.getCustomParameters();
+        } else if (callInvite2 != null) {   // CancelledCallInvite
+            phoneNumber = callInvite2.getFrom();
+            params = callInvite2.getCustomParameters();
+        }
+
+        if (phoneNumber == null) {
             textDisplayName.setText("Unknown name");
             textPhoneNumber.setVisibility(View.GONE);
             stopTimer();
             return;
         }
 
-        String phoneNumber = activeInvite.getFrom();
         String displayName = null;
 
         // -------------------------
@@ -594,7 +601,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         // -------------------------
 
         // 3.1 From custom parameters
-        Map<String, String> params = activeInvite.getCustomParameters();
         if (params != null && params.containsKey("fromDisplayName")) {
             displayName = params.get("fromDisplayName");
         }
@@ -617,20 +623,16 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         textDisplayName.setText(displayName);
 
         // -------------------------
-        // 4️⃣ Set Phone Number Properly
+        // 4️⃣ Phone Number Visibility
         // -------------------------
 
-        if (phoneNumber != null && !phoneNumber.trim().isEmpty()
-                && !phoneNumber.equals(displayName)) {
-
+        if (!phoneNumber.equals(displayName)) {
             textPhoneNumber.setVisibility(View.VISIBLE);
             textPhoneNumber.setText(phoneNumber);
-
         } else {
             textPhoneNumber.setVisibility(View.GONE);
         }
     }
-
     private void close() {
         Log.e("*TwilioCallCloseMethod******", "....01");
         if (exited || isFinishing() || activityDestroyed) return;

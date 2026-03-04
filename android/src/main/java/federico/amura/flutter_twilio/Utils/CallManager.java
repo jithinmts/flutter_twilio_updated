@@ -1,5 +1,4 @@
-package android.src.main.java.federico.amura.flutter_twilio.Utils;
-
+package federico.amura.flutter_twilio.Utils;
 public class CallManager {
 
     private static CallManager instance;
