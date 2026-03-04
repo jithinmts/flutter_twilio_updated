@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import federico.amura.flutter_twilio.Utils.SoundUtils;
-import federico.amura.flutter_twilio.BackgroundCallJavaActivity;
+import federico.amura.flutter_twilio.IncomingCallNotificationService;
 public class TwilioUtils {
     private static final String TAG = "TwilioUtils";
 
@@ -195,19 +195,8 @@ public class TwilioUtils {
         Log.i(TAG, "INSIDE DISCONNECT");
 
         if (activeCall == null) return;
-
         Call call = activeCall;
-
-        // ⭐ Clear references FIRST
-        activeCall = null;
-        callInvite = null;
-        fromDisplayName = null;
-        toDisplayName = null;
-        status = "callDisconnected";
-
-        // ⭐ Disconnect SDK session
         call.disconnect();
-
         SoundUtils.getInstance(context).stopRinging();
     }
 
@@ -451,22 +440,21 @@ public class TwilioUtils {
 
             @Override
             public void onDisconnected(@NonNull Call call, CallException e) {
-                SoundUtils.getInstance(context).stopRinging();
+                Log.i(TAG, "onDisconnected");
 
-                status = "callDisconnected";
+                // ⭐ NOW clear everything safely
                 activeCall = null;
                 callInvite = null;
                 fromDisplayName = null;
                 toDisplayName = null;
-                if (listener != null) {
-                    listener.onDisconnected(call, e);
-                }
-                if (e != null) {
-                    e.printStackTrace();
-                    Log.i(TAG, "onDisconnected. Error: " + e.getMessage());
-                } else {
-                    Log.i(TAG, "onDisconnected");
-                }
+                status = "callDisconnected";
+
+                SoundUtils.getInstance(context).stopRinging();
+
+                // ⭐ Stop service AFTER signaling finished
+                context.stopService(
+                        new Intent(context, IncomingCallNotificationService.class)
+                );
             }
 
             @Override

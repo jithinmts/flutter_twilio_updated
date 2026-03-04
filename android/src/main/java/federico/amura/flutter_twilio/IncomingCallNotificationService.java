@@ -367,20 +367,10 @@ public class IncomingCallNotificationService extends Service {
 
     private void terminateServiceCleanly() {
         try {
-
             SoundUtils.getInstance(this).stopRinging();
-
-            if (TwilioUtils.getInstance(this).getActiveCall() != null) {
-                TwilioUtils.getInstance(getApplicationContext()).disconnect();
-            }
-
             stopForeground(true);
-
-            NotificationManagerCompat.from(this)
-                    .cancelAll();
-
+            NotificationManagerCompat.from(this).cancelAll();
             stopSelf();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
