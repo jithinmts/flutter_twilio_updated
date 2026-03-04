@@ -50,11 +50,11 @@ public class NotificationUtils {
             }
         }
 
-        Log.d(" call getFrom 2", callInvite.getFrom());
-        Log.d(" call getFrom 3", callInvite.getCustomParameters().entrySet().toString());
+        Log.e(" call getFrom 2", callInvite.getFrom());
+        Log.e(" call getFrom 3", callInvite.getCustomParameters().entrySet().toString());
         if (fromDisplayName.equals("Unknown number"))
             fromDisplayName = callInvite.getFrom();
-        Log.d(" fromDisplayName", fromDisplayName);
+        Log.e(" fromDisplayName", fromDisplayName);
         String notificationTitle = context.getString(R.string.notification_incoming_call_title);
         String notificationText = fromDisplayName;
 
@@ -63,7 +63,7 @@ public class NotificationUtils {
          * notification later
          */
         Bundle extras = new Bundle();
-        Log.d(" call Invite 2", callInvite.getCallSid());
+        Log.e(" call Invite 2", callInvite.getCallSid());
         extras.putString(TwilioConstants.CALL_SID_KEY, callInvite.getCallSid());
 
         // Click intent
@@ -72,7 +72,7 @@ public class NotificationUtils {
 //        intent.addCategory(Intent.CATEGORY_LAUNCHER);
         intent.setAction(TwilioConstants.ACTION_INCOMING_CALL);
         intent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
-        Log.d(" call Invite 3", callInvite.getCallSid());
+        Log.e(" call Invite 3", callInvite.getCallSid());
         intent.setFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK |
                         Intent.FLAG_ACTIVITY_NEW_DOCUMENT |
@@ -174,11 +174,11 @@ public class NotificationUtils {
             }
         }
 
-        Log.d(" call getFrom 2", cancelledCallInvite.getFrom());
-        Log.d(" call getFrom 3", cancelledCallInvite.getCustomParameters().entrySet().toString());
+        Log.e(" call getFrom 2", cancelledCallInvite.getFrom());
+        Log.e(" call getFrom 3", cancelledCallInvite.getCustomParameters().entrySet().toString());
         if (fromDisplayName.equals("Unknown number"))
             fromDisplayName = cancelledCallInvite.getFrom();
-        Log.d(" fromDisplayName", fromDisplayName);
+        Log.e(" fromDisplayName", fromDisplayName);
         String notificationText = fromDisplayName;
 
         Intent returnCallIntent = new Intent(context, BackgroundCallJavaActivity.class);

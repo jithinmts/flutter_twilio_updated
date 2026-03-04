@@ -45,11 +45,11 @@ public class IncomingCallNotificationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
-        Log.i(TAG, "onStartCommand " + action);
+        Log.e(TAG, "onStartCommand " + action);
         if (action != null) {
             switch (action) {
                 case TwilioConstants.ACTION_INCOMING_CALL: {
-                    Log.e("*Twilio onStartCommand ", "ACTION_INCOMING_CALL case");
+                    Log.e(TAG, "ACTION_INCOMING_CALL case");
 
                     CallInvite callInvite =
                             intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
@@ -68,7 +68,7 @@ public class IncomingCallNotificationService extends Service {
                 break;
 
                 case TwilioConstants.ACTION_ACCEPT: {
-                    Log.e("*Twilio onStartCommand ", "ACTION_ACCEPT case");
+                    Log.e(TAG, "ACTION_ACCEPT case");
 
                     CallInvite callInvite =
                             intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
@@ -86,7 +86,7 @@ public class IncomingCallNotificationService extends Service {
                 }
                 break;
                 case TwilioConstants.ACTION_REJECT: {
-                    Log.e("*Twilio onStartCommand ", "ACTION_REJECT case");
+                    Log.e(TAG, "ACTION_REJECT case");
 
                     CallInvite callInvite =
                             intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
@@ -106,13 +106,13 @@ public class IncomingCallNotificationService extends Service {
                 }
                 break;
                 case TwilioConstants.ACTION_CANCEL_CALL: {
-                    Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_CANCEL_CALL case");
+                    Log.e(TAG, "TwilioConstants.ACTION_CANCEL_CALL case");
                     handleCancelledCall(intent);
                 }
                 break;
 
                 case TwilioConstants.ACTION_STOP_SERVICE: {
-                    Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_STOP_SERVICE case");
+                    Log.e(TAG, "TwilioConstants.ACTION_STOP_SERVICE case");
 
                     stopServiceIncomingCall();
                     stopSelf();              // ⭐ REQUIRED
@@ -120,12 +120,12 @@ public class IncomingCallNotificationService extends Service {
                 break;
 
                 case TwilioConstants.ACTION_RETURN_CALL:
-                    Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_RETURN_CALL case");
+                    Log.e(TAG, "TwilioConstants.ACTION_RETURN_CALL case");
                     returnCall(intent);
                     break;
 
                 case TwilioConstants.ACTION_MISSED_CALL:
-                    Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_MISSED_CALL case");
+                    Log.e(TAG, "TwilioConstants.ACTION_MISSED_CALL case");
                     missedCall(intent);
                     break;
             }
@@ -151,7 +151,7 @@ public class IncomingCallNotificationService extends Service {
         Log.e(TAG, "Incoming call. App visible: " + isAppVisible() + ". Locked: " + isLocked());
 
         if (TwilioUtils.getInstance(this).getActiveCall() != null) {
-            Log.i(TAG, "Incoming call. There is already an active call");
+            Log.e(TAG, "Incoming call. There is already an active call");
             return;
         }
 
@@ -194,7 +194,7 @@ public class IncomingCallNotificationService extends Service {
     }
 
     private void handleCancelledCall(Intent intent) {
-        Log.i(TAG, "Call canceled. App visible: " + isAppVisible() + ". Locked: " + isLocked());
+        Log.e(TAG, "Call canceled. App visible: " + isAppVisible() + ". Locked: " + isLocked());
 
         // Stop ringtone immediately
         SoundUtils.getInstance(this).stopRinging();

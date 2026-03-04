@@ -59,7 +59,7 @@ public class FlutterTwilioPlugin implements
         if (!this.broadcastReceiverRegistered) {
             this.broadcastReceiverRegistered = true;
 
-            Log.i(TAG, "Registered broadcast");
+            Log.e(TAG, "Registered broadcast");
             this.broadcastReceiver = new CustomBroadcastReceiver(this);
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(TwilioConstants.ACTION_ACCEPT);
@@ -71,40 +71,40 @@ public class FlutterTwilioPlugin implements
         if (this.broadcastReceiverRegistered) {
             this.broadcastReceiverRegistered = false;
 
-            Log.i(TAG, "Unregistered broadcast");
+            Log.e(TAG, "Unregistered broadcast");
             LocalBroadcastManager.getInstance(this.context).unregisterReceiver(this.broadcastReceiver);
         }
     }
 
     @Override
     public void onAttachedToActivity(ActivityPluginBinding activityPluginBinding) {
-        Log.d(TAG, "onAttachedToActivity");
+        Log.e(TAG, "onAttachedToActivity");
         activityPluginBinding.addOnNewIntentListener(this);
         this.registerReceiver();
     }
 
     @Override
     public void onDetachedFromActivityForConfigChanges() {
-        Log.d(TAG, "onDetachedFromActivityForConfigChanges");
+        Log.e(TAG, "onDetachedFromActivityForConfigChanges");
         this.unregisterReceiver();
     }
 
     @Override
     public void onReattachedToActivityForConfigChanges(ActivityPluginBinding activityPluginBinding) {
-        Log.d(TAG, "onReattachedToActivityForConfigChanges");
+        Log.e(TAG, "onReattachedToActivityForConfigChanges");
         activityPluginBinding.addOnNewIntentListener(this);
         this.registerReceiver();
     }
 
     @Override
     public void onDetachedFromActivity() {
-        Log.d(TAG, "onDetachedFromActivity");
+        Log.e(TAG, "onDetachedFromActivity");
         this.unregisterReceiver();
     }
 
     @Override
     public boolean onNewIntent(Intent intent) {
-        Log.d(TAG, "onNewIntent");
+        Log.e(TAG, "onNewIntent");
         this.handleIncomingCallIntent(intent);
         return false;
     }
@@ -112,7 +112,7 @@ public class FlutterTwilioPlugin implements
     private void handleIncomingCallIntent(Intent intent) {
         if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();
-            Log.i(TAG, "onReceive. Action: " + action);
+            Log.e(TAG, "onReceive. Action: " + action);
 
             if (TwilioConstants.ACTION_ACCEPT.equals(action)) {
                 CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
@@ -125,7 +125,7 @@ public class FlutterTwilioPlugin implements
     }
     @Override
     public void onMethodCall(MethodCall call, @NonNull Result result) {
-        Log.i(TAG, "onMethodCall. Method: " + call.method);
+        Log.e(TAG, "onMethodCall. Method: " + call.method);
         TwilioUtils twilioUtils = TwilioUtils.getInstance(this.context);
 
         switch (call.method) {
@@ -133,19 +133,19 @@ public class FlutterTwilioPlugin implements
                 String identity = call.argument("identity");
                 String accessToken = call.argument("accessToken");
                 String fcmToken = call.argument("fcmToken");
-                Log.i("TwilioLog:", "identity: " + identity + " ,accessToken: " + accessToken + " ,fcmToken: " + fcmToken);
+                Log.e(TAG, "identity: " + identity + " ,accessToken: " + accessToken + " ,fcmToken: " + fcmToken);
 
                 try {
                     twilioUtils.register(identity, accessToken, fcmToken, new TwilioRegistrationListener() {
                         @Override
                         public void onRegistered() {
-                            Log.i("TwilioLog:", "in registered success");
+                            Log.e(TAG, "in registered success");
                             result.success("");
                         }
 
                         @Override
                         public void onError() {
-                            Log.i("TwilioLog:", "in registered error");
+                            Log.e(TAG, "in registered error");
 
                             result.error("", "", "");
                         }
@@ -368,11 +368,11 @@ public class FlutterTwilioPlugin implements
     private void answer(CallInvite callInvite) {
         try {
             if (callInvite == null) return;
-            Log.d(TAG, "answer CALL: ");
+            Log.e(TAG, "answer CALL: ");
             TwilioUtils t = TwilioUtils.getInstance(this.context);
             t.acceptInvite(callInvite, getCallListener());
             responseChannel.invokeMethod("callConnecting", t.getCallDetails());
-            Log.d(TAG, "answer CALL: ");
+            Log.e(TAG, "answer CALL: ");
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -384,25 +384,25 @@ public class FlutterTwilioPlugin implements
         return new Call.Listener() {
             @Override
             public void onConnectFailure(@NonNull Call call, @NonNull CallException error) {
-                Log.d(TAG, "onConnectFailure. Error: " + error.getMessage());
+                Log.e(TAG, "onConnectFailure. Error: " + error.getMessage());
                 responseChannel.invokeMethod("callDisconnected", "");
             }
 
             @Override
             public void onRinging(@NonNull Call call) {
-                Log.d(TAG, "onRinging");
+                Log.e(TAG, "onRinging");
                 responseChannel.invokeMethod("callRinging", t.getCallDetails());
             }
 
             @Override
             public void onConnected(@NonNull Call call) {
-                Log.d(TAG, "onConnected");
+                Log.e(TAG, "onConnected");
                 responseChannel.invokeMethod("callConnected", t.getCallDetails());
             }
 
             @Override
             public void onReconnecting(@NonNull Call call, @NonNull CallException e) {
-                Log.d(TAG, "onReconnecting. Error: " + e.getMessage());
+                Log.e(TAG, "onReconnecting. Error: " + e.getMessage());
                 responseChannel.invokeMethod("callReconnecting", t.getCallDetails());
             }
 

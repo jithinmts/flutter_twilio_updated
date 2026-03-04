@@ -55,7 +55,7 @@ public class TwilioUtils {
         Voice.register(accessToken, Voice.RegistrationChannel.FCM, fcmToken, new RegistrationListener() {
             @Override
             public void onRegistered(@NonNull String accessToken, @NonNull String fcmToken) {
-                Log.d(TAG, "Successfully registered");
+                Log.e(TAG, "Successfully registered");
                 if (listener != null) {
                     listener.onRegistered();
                 }
@@ -70,7 +70,7 @@ public class TwilioUtils {
                         error.getErrorCode(),
                         error.getMessage());
 
-                Log.d(TAG, "Error registering. " + message);
+                Log.e(TAG, "Error registering. " + message);
 
                 if (listener != null) {
                     listener.onError();
@@ -91,7 +91,7 @@ public class TwilioUtils {
         Voice.unregister(accessToken, Voice.RegistrationChannel.FCM, fcmToken, new UnregistrationListener() {
             @Override
             public void onUnregistered(String s, String s1) {
-                Log.d(TAG, "Successfully unregistered");
+                Log.e(TAG, "Successfully unregistered");
             }
 
             @Override
@@ -102,7 +102,7 @@ public class TwilioUtils {
                         error.getErrorCode(),
                         error.getMessage());
 
-                Log.d(TAG, "Error unregistering. " + message);
+                Log.e(TAG, "Error unregistering. " + message);
             }
         });
     }
@@ -151,11 +151,11 @@ public class TwilioUtils {
 
     public void sendDigits(String digit) {
         if (activeCall != null) {
-            Log.i(TAG, "sending digit: " + digit);
+            Log.e(TAG, "sending digit: " + digit);
             activeCall.sendDigits(digit);
-            Log.i(TAG, "digit sent: ");
+            Log.e(TAG, "digit sent: ");
         } else {
-            Log.i(TAG, "Error sending digits, no active call");
+            Log.e(TAG, "Error sending digits, no active call");
         }
     }
 
@@ -260,7 +260,7 @@ public class TwilioUtils {
         for (AudioDeviceInfo device : devices) {
             if (device.getType() == targetDeviceType) {
                 boolean result = audioManager.setCommunicationDevice(device);
-                Log.d("result: ", "" + result);
+                Log.e("result: ", "" + result);
             }
         }
     }
@@ -385,7 +385,7 @@ public class TwilioUtils {
             public void onConnectFailure(@NonNull Call call, @NonNull CallException e) {
                 e.printStackTrace();
                 SoundUtils.getInstance(context).stopRinging();
-                Log.i(TAG, "onConnectFailure. Error: " + e.getMessage());
+                Log.e(TAG, "onConnectFailure. Error: " + e.getMessage());
 
                 status = "callDisconnected";
                 if (listener != null) {
@@ -404,7 +404,7 @@ public class TwilioUtils {
 
             @Override
             public void onRinging(@NonNull Call call) {
-                Log.i(TAG, "onRinging");
+                Log.e(TAG, "onRinging");
                 status = "callRinging";
                 activeCall = call;
 
@@ -422,7 +422,7 @@ public class TwilioUtils {
 
             @Override
             public void onConnected(@NonNull Call call) {
-                Log.i(TAG, "onConnected");
+                Log.e(TAG, "onConnected");
                 Log.e(TAG, "CONNECTED SID = " + call.getSid());
 
                 // ✅ STOP RINGING HERE
@@ -447,7 +447,7 @@ public class TwilioUtils {
             public void onReconnecting(@NonNull Call call, @NonNull CallException e) {
                 e.printStackTrace();
 
-                Log.i(TAG, "onReconnecting. Error: " + e.getMessage());
+                Log.e(TAG, "onReconnecting. Error: " + e.getMessage());
                 activeCall = call;
                 status = "callReconnecting";
 
@@ -465,7 +465,7 @@ public class TwilioUtils {
 
             @Override
             public void onReconnected(@NonNull Call call) {
-                Log.i(TAG, "onReconnected");
+                Log.e(TAG, "onReconnected");
                 activeCall = call;
                 status = "callReconnected";
 
@@ -502,9 +502,9 @@ public class TwilioUtils {
                 }
                 if (e != null) {
                     e.printStackTrace();
-                    Log.i(TAG, "onDisconnected. Error: " + e.getMessage());
+                    Log.e(TAG, "onDisconnected. Error: " + e.getMessage());
                 } else {
-                    Log.i(TAG, "onDisconnected");
+                    Log.e(TAG, "onDisconnected");
                 }
             }
 

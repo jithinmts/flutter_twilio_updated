@@ -59,7 +59,7 @@ public class PreferencesUtils {
                 editor.putString(phoneNumber, displayName );
                 i++;
             }
-            Log.i(TAG, "Saved " + i + " contacts");
+            Log.e(TAG, "Saved " + i + " contacts");
         }
 
         editor.apply();
@@ -69,51 +69,51 @@ public class PreferencesUtils {
         String defaultDisplayName = this.getDefaultDisplayName();
 
         if (phoneNumber == null || phoneNumber.trim().equals("")) {
-            Log.i(TAG, "Error finding the contact display. No phone number");
+            Log.e(TAG, "Error finding the contact display. No phone number");
             return defaultDisplayName;
         }
 
         final String value = this.sharedPreferencesContactData.getString(phoneNumber, null);
         if (value == null || value.equals("")) {
-            Log.i(TAG, "Error finding the contact display name for " + phoneNumber + ". No value stored");
+            Log.e(TAG, "Error finding the contact display name for " + phoneNumber + ". No value stored");
             return defaultDisplayName;
         }
 
         try {
             final String[] parts = value.split(";");
             if (parts.length == 0) {
-                Log.i(TAG, "Error finding the contact display name for " + phoneNumber + ". The stored value is wrong " + value + ". Contains " + parts.length + " parts.");
+                Log.e(TAG, "Error finding the contact display name for " + phoneNumber + ". The stored value is wrong " + value + ". Contains " + parts.length + " parts.");
                 return defaultDisplayName;
             }
 
             return parts[0];
         } catch (Exception e) {
-            Log.i(TAG, "Error finding the contact display name for " + phoneNumber + ". Error: " + e.getMessage());
+            Log.e(TAG, "Error finding the contact display name for " + phoneNumber + ". Error: " + e.getMessage());
             return defaultDisplayName;
         }
     }
 
     public String findPhotoURL(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.trim().equals("")) {
-            Log.i(TAG, "Error finding the contact photo URL. No phone number");
+            Log.e(TAG, "Error finding the contact photo URL. No phone number");
             return "";
         }
 
         final String value = this.sharedPreferencesContactData.getString(phoneNumber, null);
         if (value == null || value.equals("")) {
-            Log.i(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". No value stored");
+            Log.e(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". No value stored");
             return "";
         }
 
         try {
             final String[] parts = value.split(";");
             if (parts.length < 2) {
-                Log.i(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". The stored value is wrong " + value + ". Contains " + parts.length + " parts.");
+                Log.e(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". The stored value is wrong " + value + ". Contains " + parts.length + " parts.");
                 return "";
             }
             return parts[1];
         } catch (Exception e) {
-            Log.i(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". Error: " + e.getMessage());
+            Log.e(TAG, "Error finding the contact photo URL name for " + phoneNumber + ". Error: " + e.getMessage());
             return "";
         }
     }

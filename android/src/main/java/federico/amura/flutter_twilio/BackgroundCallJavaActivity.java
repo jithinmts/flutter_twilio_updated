@@ -37,6 +37,7 @@ import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.squareup.picasso.Picasso;
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
@@ -151,7 +152,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         );
 
         if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            Log.w(TAG, "Audio focus not granted");
+            Log.e(TAG, "Audio focus not granted");
         }
         return audioManager.isSpeakerphoneOn();
     }
@@ -214,7 +215,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                     }
 
                 } catch (Exception e) {
-                    Log.d(TAG, e.toString());
+                    Log.e(TAG, e.toString());
                 }
 
                 if (!activityDestroyed && !isFinishing() && !exited) {
@@ -267,7 +268,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         }
 
         KeyguardManager kgm = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
-        Log.d(TAG, "isKeyguardUp $isKeyguardUp");
+        Log.e(TAG, "isKeyguardUp $isKeyguardUp");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             kgm.requestDismissKeyguard(this, null);
         }
@@ -370,12 +371,12 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void checkPermissionsAndAccept() {
-        Log.d(TAG, "Clicked accept");
+        Log.e(TAG, "Clicked accept");
         if (!checkPermissionForMicrophone()) {
-            Log.d(TAG, "configCallUI-requestAudioPermissions");
+            Log.e(TAG, "configCallUI-requestAudioPermissions");
             requestAudioPermissions();
         } else {
-            Log.d(TAG, "configCallUI-newAnswerCallClickListener");
+            Log.e(TAG, "configCallUI-newAnswerCallClickListener");
             acceptCall();
         }
     }
@@ -387,7 +388,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
     private void requestAudioPermissions() {
         String[] permissions = {Manifest.permission.RECORD_AUDIO};
-        Log.d(TAG, "requestAudioPermissions");
+        Log.e(TAG, "requestAudioPermissions");
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
                 ActivityCompat.requestPermissions(this, permissions, MIC_PERMISSION_REQUEST_CODE);
@@ -395,7 +396,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 ActivityCompat.requestPermissions(this, permissions, MIC_PERMISSION_REQUEST_CODE);
             }
         } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "requestAudioPermissions-> permission granted->newAnswerCallClickListener");
+            Log.e(TAG, "requestAudioPermissions-> permission granted->newAnswerCallClickListener");
             acceptCall();
         }
     }
@@ -525,10 +526,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
         String status = (String) call.get("status");
         if (status != null && !status.trim().equals("")) {
-            Log.e("*TwilioCallStatus******", "...." + status);
+            Log.e(TAG, "...." + status);
             switch (status) {
                 case "callRinging": {
-                    Log.e("*Twilio*", "...........callRinging.........");
+                    Log.e(TAG, "...........callRinging.........");
                     this.textCallStatus.setVisibility(View.VISIBLE);
                     textCallStatus.setText(R.string.call_status_ringing);
                 }
@@ -562,7 +563,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             }
 
             if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
-                Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
+                Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
                 final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite.getFrom());
                 if (contactName != null && !contactName.trim().isEmpty()) {
                     fromDisplayName = contactName;
@@ -572,10 +573,10 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             }
         } else if (this.callInvite2 != null) {
 
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case.........");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getFrom());
+            Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case.........");
+            Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getFrom());
             for (Map.Entry<String, String> entry : callInvite2.getCustomParameters().entrySet()) {
-                Log.e("*Twilio*", "entry.getKey() " + entry.getKey());
+                Log.e(TAG, "entry.getKey() " + entry.getKey());
 
                 if (entry.getKey().equals("fromDisplayName")) {
                     fromDisplayName = entry.getValue();
@@ -583,7 +584,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             }
 
             if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
-                Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
+                Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
                 final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite2.getFrom());
                 if (contactName != null && !contactName.trim().isEmpty()) {
                     fromDisplayName = contactName;
@@ -776,7 +777,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void returnCall(Intent intent, CancelledCallInvite callInvite) {
-//        stopForeground(true);
         Log.i(TAG, "returning call!!!!");
         Log.e(TAG, "*******************************************19");
 
