@@ -35,5 +35,5 @@ public class TwilioConstants {
     public static final String ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE";
     public static final String RECEIVE_INTENT_EXAMPLE_ACTION = "RECEIVE_INTENT_EXAMPLE_ACTION";
 
-    public static final String ACTION_CALL_DISCONNECTED = "ACTION_CALL_DISCONNECTED";
+    private static final String ACTION_CALL_DISCONNECTED = "ACTION_CALL_DISCONNECTED";
 }

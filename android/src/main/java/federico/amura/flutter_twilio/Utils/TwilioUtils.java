@@ -31,7 +31,6 @@ import federico.amura.flutter_twilio.Utils.SoundUtils;
 import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.IncomingCallNotificationService;
 import android.content.Intent;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class TwilioUtils {
     private static final String TAG = "TwilioUtils";
