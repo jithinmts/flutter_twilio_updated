@@ -192,20 +192,23 @@ public class TwilioUtils {
     }
 
     public synchronized void disconnect() {
-        Log.e(TAG, "INSIDE DISCONNECT");
-        if (activeCall == null) return;
+        Log.i(TAG, "INSIDE DISCONNECT");
 
-        Log.e(TAG, "DISCONNECT SID = " + activeCall.getSid());
+        if (activeCall == null) return;
 
         Call call = activeCall;
 
+        // ⭐ Clear references FIRST
         activeCall = null;
         callInvite = null;
         fromDisplayName = null;
         toDisplayName = null;
         status = "callDisconnected";
 
+        // ⭐ Disconnect SDK session
         call.disconnect();
+
+        SoundUtils.getInstance(context).stopRinging();
     }
 
     public boolean toggleMute() {
@@ -389,13 +392,6 @@ public class TwilioUtils {
 
                 status = "callDisconnected";
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onConnectFailure(call, e);
                 }
 
@@ -409,13 +405,6 @@ public class TwilioUtils {
                 activeCall = call;
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing()) return;
-                    }
-
                     listener.onRinging(call);
                 }
             }
@@ -432,13 +421,6 @@ public class TwilioUtils {
                 status = "callConnected";
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onConnected(call);
                 }
             }
@@ -452,13 +434,6 @@ public class TwilioUtils {
                 status = "callReconnecting";
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onReconnecting(call, e);
                 }
             }
@@ -470,13 +445,6 @@ public class TwilioUtils {
                 status = "callReconnected";
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onReconnected(call);
                 }
             }
@@ -491,13 +459,6 @@ public class TwilioUtils {
                 fromDisplayName = null;
                 toDisplayName = null;
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onDisconnected(call, e);
                 }
                 if (e != null) {
@@ -535,24 +496,27 @@ public class TwilioUtils {
     public void forceTerminateCall() {
         try {
             Log.i(TAG, "*******forceTerminateCall*******");
+            Log.i(TAG, "*******forceTerminateCall*******");
+
             if (activeCall != null) {
 
                 Call call = activeCall;
 
                 activeCall = null;
-
                 callInvite = null;
                 status = "callDisconnected";
 
-                // 🔥 IMPORTANT — wait for SDK teardown
                 call.disconnect();
-
-                // Give SDK time to close media transport
-                try {
-                    Thread.sleep(400);
-                } catch (Exception ignored) {
-                }
             }
+
+            Voice.unregister(
+                    PreferencesUtils.getInstance(context).getAccessToken(),
+                    Voice.RegistrationChannel.FCM,
+                    PreferencesUtils.getInstance(context).getFcmToken(),
+                    null
+            );
+
+            SoundUtils.getInstance(context).stopRinging();
 
         } catch (Exception e) {
             e.printStackTrace();

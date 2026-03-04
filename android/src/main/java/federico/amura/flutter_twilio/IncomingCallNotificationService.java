@@ -28,7 +28,7 @@ import com.twilio.voice.CancelledCallInvite;
 
 import java.util.List;
 import java.util.Map;
-
+import android.app.ServiceInfo;
 import federico.amura.flutter_twilio.Utils.AppForegroundStateUtils;
 import federico.amura.flutter_twilio.Utils.NotificationUtils;
 import federico.amura.flutter_twilio.Utils.PreferencesUtils;
@@ -114,8 +114,7 @@ public class IncomingCallNotificationService extends Service {
                 case TwilioConstants.ACTION_STOP_SERVICE: {
                     Log.e("*Twilio onStartCommand ", "TwilioConstants.ACTION_STOP_SERVICE case");
 
-                    stopServiceIncomingCall();
-                    stopSelf();              // ⭐ REQUIRED
+                    terminateServiceCleanly();              // ⭐ REQUIRED
                 }
                 break;
 
@@ -136,6 +135,13 @@ public class IncomingCallNotificationService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+
+        terminateServiceCleanly();
     }
 
     private void handleIncomingCall(CallInvite callInvite) {
@@ -160,12 +166,10 @@ public class IncomingCallNotificationService extends Service {
 
     private void accept(CallInvite callInvite) {
         SoundUtils.getInstance(this).stopRinging();
-        stopServiceIncomingCall();
+        terminateServiceCleanly();
 
         TwilioUtils utils = TwilioUtils.getInstance(this);
         utils.setCallInvite(callInvite); // 🔥 ensure stored
-
-        stopSelf();
 
         if (!isLocked() && isAppVisible()) {
             informAppAcceptCall(callInvite);
@@ -177,7 +181,7 @@ public class IncomingCallNotificationService extends Service {
     private void reject(CallInvite callInvite) {
         Log.e(TAG, "Reject call invite from service");
 
-        stopServiceIncomingCall();
+        terminateServiceCleanly();
 
         if (callInvite != null) {
             try {
@@ -189,22 +193,20 @@ public class IncomingCallNotificationService extends Service {
         } else {
             Log.e(TAG, "Reject failed: invite from intent is null");
         }
-
-        stopSelf();
     }
 
     private void handleCancelledCall(Intent intent) {
         Log.i(TAG, "Call canceled. App visible: " + isAppVisible() + ". Locked: " + isLocked());
-
+        if (TwilioUtils.getInstance(this).getActiveCall() != null) {
+            TwilioUtils.disconnect();
+        }
         // Stop ringtone immediately
         SoundUtils.getInstance(this).stopRinging();
 
         // 🔥 DO NOT call disconnect() here
         // Cancel means call was never connected
 
-        stopServiceIncomingCall();
-
-        stopSelf();
+        terminateServiceCleanly();
 
         CancelledCallInvite cancelledCallInvite =
                 intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
@@ -309,12 +311,6 @@ public class IncomingCallNotificationService extends Service {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
-    private void informAppCancelCall() {
-        Intent intent = new Intent();
-        intent.setAction(TwilioConstants.ACTION_CANCEL_CALL);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
-    }
-
     private void openBackgroundCallActivityForAcceptCall(CallInvite callInvite) {
         try {
             Log.e(TAG, "openBackgroundCallActivityForAcceptCall function inside");
@@ -366,6 +362,27 @@ public class IncomingCallNotificationService extends Service {
             intent.putExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE, intents);
             intent.setAction(TwilioConstants.ACTION_MISSED_CALL);
             startActivity(intent);
+        }
+    }
+
+    private void terminateServiceCleanly() {
+        try {
+
+            SoundUtils.getInstance(this).stopRinging();
+
+            if (TwilioUtils.getInstance(this).getActiveCall() != null) {
+                TwilioUtils.disconnect();
+            }
+
+            stopForeground(true);
+
+            NotificationManagerCompat.from(this)
+                    .cancelAll();
+
+            stopSelf();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

@@ -457,14 +457,16 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
 
     private void hangUp() {
-        new Thread(() -> {
+        try {
 
             TwilioUtils.getInstance(getApplicationContext())
                     .forceTerminateCall();
 
-            runOnUiThread(this::closeWithoutDisconnect);
+            closeWithoutDisconnect();
 
-        }).start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void onCallCanceled() {
@@ -668,24 +670,27 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void close() {
-        Log.e("*TwilioCallCloseMethod******", "....01");
-        if (exited || isFinishing() || activityDestroyed) return;
-
-        exited = true;
-
-        handler.removeCallbacksAndMessages(null);
-
-        stopTimer();
-
-        NotificationManagerCompat.from(getApplicationContext()).cancelAll();
-
-        if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
-        }
-
         try {
-            finishAffinity();
-        } catch (Exception ignored) {
+            Log.e("*TwilioCallCloseMethod******", "....01");
+
+            if (exited || isFinishing() || activityDestroyed) return;
+
+            exited = true;
+
+            handler.removeCallbacksAndMessages(null);
+
+            stopTimer();
+
+            NotificationManagerCompat.from(getApplicationContext()).cancelAll();
+
+            if (wakeLock != null && wakeLock.isHeld()) {
+                wakeLock.release();
+            }
+
+            finish();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -768,11 +773,6 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
                 Log.d("TWILIO", "Call disconnected. Clearing active call.");
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
                 updateCallDetails();
-                runOnUiThread(() -> {
-                    if (!isFinishing() && !activityDestroyed) {
-                        closeWithoutDisconnect();
-                    }
-                });
             }
         };
     }
