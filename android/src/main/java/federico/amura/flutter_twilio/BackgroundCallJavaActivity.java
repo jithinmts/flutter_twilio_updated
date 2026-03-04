@@ -630,34 +630,11 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             // Phone number
             this.textPhoneNumber.setText("");
         }
-//        String phoneNumber;
-//        if (from != null && !from.trim().equals("")) {
-//            phoneNumber = from;
-//        } else {
-//            phoneNumber = (String) call.get("to");
-//        }
-//
-//        if (phoneNumber != null && !phoneNumber.trim().equals("")) {
-//            this.textPhoneNumber.setText(phoneNumber);
-//        } else {
-//            this.textPhoneNumber.setText("");
-//        }
+
 
         // Image
-        Picasso.get().load("https://stonegatesl.com/wp-content/uploads/2021/01/avatar-300x300.jpg").into(this.image);
+       // Picasso.get().load("https://stonegatesl.com/wp-content/uploads/2021/01/avatar-300x300.jpg").into(this.image);
 
-//        String imageURL = null;
-//        if (from != null && !from.trim().equals("")) {
-//            imageURL = PreferencesUtils.getInstance(this).findPhotoURL(from);
-//        } else {
-//            imageURL = (String) call.get("toPhotoURL");
-//        }
-
-//        if (imageURL != null && !imageURL.trim().equals("")) {
-//            Picasso.get().load(imageURL).into(this.image);
-//        } else {
-//            Picasso.get().load("https://stonegatesl.com/wp-content/uploads/2021/01/avatar-300x300.jpg").into(this.image);
-//        }
 
         // Timer
         if (status != null && status.equals("callConnected")) {

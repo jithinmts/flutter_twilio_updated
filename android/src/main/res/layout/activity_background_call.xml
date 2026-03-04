@@ -34,7 +34,7 @@
                 android:layout_height="60dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_person"
-                android:tint="@color/blue" />
+                android:tint="@color/black" />
 
         </FrameLayout>
 
