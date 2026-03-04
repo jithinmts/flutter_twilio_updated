@@ -7,4 +7,5 @@ enum FlutterTwilioStatus {
   reconnected,
   unknown,
   missedCall,
+  registerError
 }

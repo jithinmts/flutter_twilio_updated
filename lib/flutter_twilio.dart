@@ -37,7 +37,7 @@ class FlutterTwilio {
 
           _streamController.add(
             FlutterTwilioEvent(
-              FlutterTwilioStatus.unknown,
+              FlutterTwilioStatus.registerError,
               null,
             ),
           );
