@@ -120,7 +120,9 @@ public class FlutterTwilioPlugin implements
                 answer(callInvite);
             }
             if (TwilioConstants.ACTION_MISSED_CALL.equals(action)) {
-                responseChannel.invokeMethod("missedCall", "");
+                if (responseChannel != null) {
+                    responseChannel.invokeMethod("missedCall", "");
+                }
             }
         }
     }
@@ -141,12 +143,21 @@ public class FlutterTwilioPlugin implements
                         @Override
                         public void onRegistered() {
                             Log.e(TAG, "in registered success");
+
+                            if (responseChannel != null) {
+                                responseChannel.invokeMethod("registrationSuccess", "");
+                            }
+
                             result.success("");
                         }
 
                         @Override
                         public void onError() {
                             Log.e(TAG, "in registered error");
+
+                            if (responseChannel != null) {
+                                responseChannel.invokeMethod("registrationFailed", "");
+                            }
 
                             result.error("REGISTER_ERROR", "Twilio registration failed", null);
                         }
@@ -174,7 +185,9 @@ public class FlutterTwilioPlugin implements
                     String to = call.argument("to");
                     Map<String, Object> data = call.argument("data");
                     twilioUtils.makeCall(to, data, getCallListener());
-                    responseChannel.invokeMethod("callConnecting", twilioUtils.getCallDetails());
+                    if (responseChannel != null) {
+                        responseChannel.invokeMethod("callConnecting", twilioUtils.getCallDetails());
+                    }
                     result.success(twilioUtils.getCallDetails());
                 } catch (Exception exception) {
                     exception.printStackTrace();
@@ -186,7 +199,9 @@ public class FlutterTwilioPlugin implements
             case "toggleMute": {
                 try {
                     boolean isMuted = twilioUtils.toggleMute();
-                    responseChannel.invokeMethod(twilioUtils.getCallStatus(), twilioUtils.getCallDetails());
+                    if (responseChannel != null) {
+                        responseChannel.invokeMethod(twilioUtils.getCallStatus(), twilioUtils.getCallDetails());
+                    }
                     result.success(isMuted);
                 } catch (Exception exception) {
                     exception.printStackTrace();
@@ -209,7 +224,9 @@ public class FlutterTwilioPlugin implements
             case "toggleSpeaker": {
                 try {
                      boolean isSpeaker = twilioUtils.toggleSpeaker();
-                    responseChannel.invokeMethod(twilioUtils.getCallStatus(), twilioUtils.getCallDetails());
+                    if (responseChannel != null) {
+                        responseChannel.invokeMethod(twilioUtils.getCallStatus(), twilioUtils.getCallDetails());
+                    }
 
                     result.success(isSpeaker);
                 } catch (Exception exception) {
@@ -372,7 +389,9 @@ public class FlutterTwilioPlugin implements
             Log.e(TAG, "answer CALL: ");
             TwilioUtils t = TwilioUtils.getInstance(this.context);
             t.acceptInvite(callInvite, getCallListener());
-            responseChannel.invokeMethod("callConnecting", t.getCallDetails());
+            if (responseChannel != null) {
+                responseChannel.invokeMethod("callConnecting", t.getCallDetails());
+            }
             Log.e(TAG, "answer CALL: ");
         } catch (Exception exception) {
             exception.printStackTrace();
@@ -386,31 +405,41 @@ public class FlutterTwilioPlugin implements
             @Override
             public void onConnectFailure(@NonNull Call call, @NonNull CallException error) {
                 Log.e(TAG, "onConnectFailure. Error: " + error.getMessage());
-                responseChannel.invokeMethod("callDisconnected", "");
+                if (responseChannel != null) {
+                    responseChannel.invokeMethod("callDisconnected", "");
+                }
             }
 
             @Override
             public void onRinging(@NonNull Call call) {
                 Log.e(TAG, "onRinging");
-                responseChannel.invokeMethod("callRinging", t.getCallDetails());
+                if (responseChannel != null) {
+                    responseChannel.invokeMethod("callRinging", t.getCallDetails());
+                }
             }
 
             @Override
             public void onConnected(@NonNull Call call) {
                 Log.e(TAG, "onConnected");
-                responseChannel.invokeMethod("callConnected", t.getCallDetails());
+                if (responseChannel != null) {
+                    responseChannel.invokeMethod("callConnected", t.getCallDetails());
+                }
             }
 
             @Override
             public void onReconnecting(@NonNull Call call, @NonNull CallException e) {
                 Log.e(TAG, "onReconnecting. Error: " + e.getMessage());
-                responseChannel.invokeMethod("callReconnecting", t.getCallDetails());
+                if (responseChannel != null) {
+                    responseChannel.invokeMethod("callReconnecting", t.getCallDetails());
+                }
             }
 
             @Override
             public void onReconnected(@NonNull Call call) {
                 Log.d(TAG, "onReconnected");
-                responseChannel.invokeMethod("callReconnected", t.getCallDetails());
+                if (responseChannel != null) {
+                    responseChannel.invokeMethod("callReconnected", t.getCallDetails());
+                }
             }
 
             @Override
@@ -422,8 +451,9 @@ public class FlutterTwilioPlugin implements
                 }
 
                 Log.d(TAG, call.getState().toString());
-
-                responseChannel.invokeMethod("callDisconnected", null);
+                if (responseChannel != null) {
+                    responseChannel.invokeMethod("callDisconnected", null);
+                }
             }
 
             @Override

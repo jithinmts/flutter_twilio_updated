@@ -23,21 +23,49 @@ class FlutterTwilio {
   static FlutterTwilioEvent? get event => _event;
 
   static void init() {
-    _streamController = StreamController.broadcast();
+    _streamController =
+    StreamController<FlutterTwilioEvent>.broadcast(onListen: () {
+      log("Twilio stream started");
+    }, onCancel: () {});
     _eventChannel.setMethodCallHandler((event) async {
       log("Call event: ${event.method} . Arguments: ${event.arguments}");
 
       try {
+        /// ⭐ Registration Failure Handling (ADD ONLY THIS PART)
+        if (event.method == "registrationFailed") {
+          log("Twilio registration failed");
+
+          _streamController.add(
+            FlutterTwilioEvent(
+              FlutterTwilioStatus.unknown,
+              null,
+            ),
+          );
+
+          return;
+        }
+
         final eventType = getEventType(event.method);
+
         FlutterTwilioCall? call;
+
         try {
-          call = FlutterTwilioCall.fromMap(
-              Map<String, dynamic>.from(event.arguments));
-        } catch (error) {}
-        _streamController.add(FlutterTwilioEvent(eventType, call));
+          if (event.arguments != null) {
+            call = FlutterTwilioCall.fromMap(
+              Map<String, dynamic>.from(event.arguments),
+            );
+          }
+        } catch (_) {}
+
+        _streamController.add(
+          FlutterTwilioEvent(eventType, call),
+        );
       } catch (error, stack) {
-        log("Error parsing call event. ${event.arguments}",
-            error: error, stackTrace: stack);
+        log(
+          "Error parsing call event",
+          error: error,
+          stackTrace: stack,
+        );
       }
     });
 
