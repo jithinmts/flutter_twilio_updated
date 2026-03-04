@@ -23,10 +23,12 @@ class FlutterTwilio {
   static FlutterTwilioEvent? get event => _event;
 
   static void init() {
-    _streamController =
-    StreamController<FlutterTwilioEvent>.broadcast(onListen: () {
-      log("Twilio stream started");
-    }, onCancel: () {});
+    if (_streamController.isClosed) {
+      _streamController =
+      StreamController<FlutterTwilioEvent>.broadcast(onListen: () {
+        log("Twilio stream started");
+      }, onCancel: () {});
+    }
     _eventChannel.setMethodCallHandler((event) async {
       log("Call event: ${event.method} . Arguments: ${event.arguments}");
 
