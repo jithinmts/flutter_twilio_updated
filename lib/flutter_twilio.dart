@@ -12,31 +12,22 @@ import 'model/status.dart';
 
 class FlutterTwilio {
   static const MethodChannel _channel = MethodChannel('flutter_twilio');
-
   static const MethodChannel _eventChannel =
       MethodChannel('flutter_twilio_response');
 
-  static late StreamController<FlutterTwilioEvent>? _streamController;
-
+  static final StreamController<FlutterTwilioEvent> _streamController = StreamController<FlutterTwilioEvent>.broadcast();
   static FlutterTwilioEvent? _event;
 
   static FlutterTwilioEvent? get event => _event;
 
   static void init() {
-    if (_streamController != null && !_streamController!.isClosed) {
-      return;
-    }
-
-    _streamController = StreamController<FlutterTwilioEvent>.broadcast(
-      onListen: () => log("Twilio stream started"),
-    );
 
     _eventChannel.setMethodCallHandler((event) async {
       log("Call event: ${event.method} . Arguments: ${event.arguments}");
 
       try {
         if (event.method == "registrationFailed") {
-          _streamController?.add(
+          _streamController.add(
             FlutterTwilioEvent(
               FlutterTwilioStatus.registerError,
               null,
@@ -46,7 +37,7 @@ class FlutterTwilio {
         }
 
         if (event.method == "registrationSuccess") {
-          _streamController?.add(
+          _streamController.add(
             FlutterTwilioEvent(
               FlutterTwilioStatus.registerSuccess,
               null,
@@ -67,19 +58,16 @@ class FlutterTwilio {
           } catch (_) {}
         }
 
-        _streamController?.add(
+        _streamController.add(
           FlutterTwilioEvent(eventType, call),
         );
       } catch (e, stack) {
-        log("Twilio event error",
+        log("Twilio stream error",
             error: e,
             stackTrace: stack);
       }
     });
 
-    _streamController?.stream.listen((event) {
-      _event = event;
-    });
   }
 
   static FlutterTwilioStatus getEventType(String event) {
