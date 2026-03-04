@@ -63,6 +63,7 @@ public class FlutterTwilioPlugin implements
             this.broadcastReceiver = new CustomBroadcastReceiver(this);
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(TwilioConstants.ACTION_ACCEPT);
+            intentFilter.addAction(TwilioConstants.ACTION_MISSED_CALL); // 🔥 ADD THIS
             LocalBroadcastManager.getInstance(this.context).registerReceiver(this.broadcastReceiver, intentFilter);
         }
     }
@@ -147,12 +148,12 @@ public class FlutterTwilioPlugin implements
                         public void onError() {
                             Log.e(TAG, "in registered error");
 
-                            result.error("", "", "");
+                            result.error("REGISTER_ERROR", "Twilio registration failed", null);
                         }
                     });
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    result.error("REGISTER_ERROR", "Twilio registration failed", null);
                 }
             }
             break;

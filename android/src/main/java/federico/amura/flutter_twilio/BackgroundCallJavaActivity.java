@@ -53,6 +53,7 @@ import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.Utils.TwilioUtils;
 import androidx.core.content.ContextCompat;
 import federico.amura.flutter_twilio.Utils.SoundUtils;
+import federico.amura.flutter_twilio.Utils.CallManager;
 
 public class BackgroundCallJavaActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -78,14 +79,18 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     private SensorManager sensorManager;
     private Sensor sensor;
     private boolean previouslySpeaker = false;
-    private Timer timer;
-    private int seconds = 0;
+
+    private Handler timerHandler = new Handler(Looper.getMainLooper());
+    private Runnable timerRunnable;
+    private long callStartTime = 0L;
+    private boolean isTimerRunning = false;
 
     private SharedPreferences sharedPreferencesContactData;
     Handler handler = new Handler();
     Runnable runnable;
     int delay = 1000;
     private volatile boolean activityDestroyed = false;
+    private long callConnectedTime = 0L;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -123,6 +128,13 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
         this.containerIncomingCall = findViewById(R.id.containerIncomingCall);
         this.containerIncomingCall.setVisibility(View.GONE);
+
+        CallManager manager = CallManager.getInstance();
+
+        if (manager.isCallConnected) {
+            callConnectedTime = manager.callConnectedTime;
+            startTimer();
+        }
 
         applyColors();
         applyColorToButton(this.btnSpeaker, false);
@@ -183,6 +195,11 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         stopTimer();
 
         super.onDestroy();
+
+        if (timerRunnable != null) {
+            timerHandler.removeCallbacks(timerRunnable);
+            timerRunnable = null;
+        }
     }
 
 
@@ -521,122 +538,96 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     }
 
     private void updateCallDetails() {
-        HashMap<String, Object> call = TwilioUtils.getInstance(getApplicationContext()).getCallDetails();
 
+        HashMap<String, Object> call =
+                TwilioUtils.getInstance(getApplicationContext()).getCallDetails();
 
-        String status = (String) call.get("status");
-        if (status != null && !status.trim().equals("")) {
-            Log.e(TAG, "...." + status);
-            switch (status) {
-                case "callRinging": {
-                    Log.e(TAG, "...........callRinging.........");
-                    this.textCallStatus.setVisibility(View.VISIBLE);
-                    textCallStatus.setText(R.string.call_status_ringing);
-                }
-                break;
+        String status = call != null ? (String) call.get("status") : null;
 
-                case "callReconnecting": {
-                    this.textCallStatus.setVisibility(View.VISIBLE);
-                    textCallStatus.setText(R.string.call_status_reconnecting);
-                }
-                break;
-
-                default: {
-                    this.textCallStatus.setVisibility(View.GONE);
-                }
-                break;
-            }
-        } else {
-            this.textCallStatus.setVisibility(View.VISIBLE);
+        // -------------------------
+        // 1️⃣ Handle Call Status UI
+        // -------------------------
+        if (status == null || status.trim().isEmpty()) {
+            textCallStatus.setVisibility(View.VISIBLE);
             textCallStatus.setText(R.string.call_status_connecting);
+        } else {
+            switch (status) {
+
+                case "callRinging":
+                    textCallStatus.setVisibility(View.VISIBLE);
+                    textCallStatus.setText(R.string.call_status_ringing);
+                    break;
+
+                case "callReconnecting":
+                    textCallStatus.setVisibility(View.VISIBLE);
+                    textCallStatus.setText(R.string.call_status_reconnecting);
+                    break;
+
+                case "callConnected":
+                    textCallStatus.setVisibility(View.GONE);
+                    break;
+
+                default:
+                    textCallStatus.setVisibility(View.GONE);
+                    break;
+            }
         }
 
-        // Display name
-        String fromDisplayName = null;
-        if (this.callInvite != null) {
+        // -------------------------
+        // 2️⃣ Get Active Call Invite
+        // -------------------------
+        CallInvite activeInvite =
+                (callInvite != null) ? callInvite : callInvite2;
 
-            for (Map.Entry<String, String> entry : callInvite.getCustomParameters().entrySet()) {
-
-                if (entry.getKey().equals("fromDisplayName")) {
-                    fromDisplayName = entry.getValue();
-                }
-            }
-
-            if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
-                Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
-                final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite.getFrom());
-                if (contactName != null && !contactName.trim().isEmpty()) {
-                    fromDisplayName = contactName;
-                } else {
-                    fromDisplayName = this.callInvite.getFrom();
-                }
-            }
-        } else if (this.callInvite2 != null) {
-
-            Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case.........");
-            Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getFrom());
-            for (Map.Entry<String, String> entry : callInvite2.getCustomParameters().entrySet()) {
-                Log.e(TAG, "entry.getKey() " + entry.getKey());
-
-                if (entry.getKey().equals("fromDisplayName")) {
-                    fromDisplayName = entry.getValue();
-                }
-            }
-
-            if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
-                Log.e(TAG, "TwilioConstants.callInvite.getCustomParameters().entrySet() case!!!!!!!!!!!!!");
-                final String contactName = PreferencesUtils.getInstance(this).findContactName(this.callInvite2.getFrom());
-                if (contactName != null && !contactName.trim().isEmpty()) {
-                    fromDisplayName = contactName;
-                } else {
-                    fromDisplayName = this.callInvite2.getFrom();
-                }
-            }
-        } else {
-            fromDisplayName = "Unknown name";
+        if (activeInvite == null) {
+            textDisplayName.setText("Unknown name");
+            textPhoneNumber.setVisibility(View.GONE);
+            stopTimer();
+            return;
         }
 
-        if (callInvite != null) {
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case1111111");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getTo());
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getFrom());
-            Log.e("*Twilio*", "fromDisplayName !" + fromDisplayName + "!");
-            Log.e("*Twilio*", "sharedPreferencesContactData !");
-            Log.e("*Twilio*", "sharedPreferencesContactData !" +
-                    this.sharedPreferencesContactData.getString(callInvite.getFrom(), "") + "!");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite.getCustomParameters().entrySet());
+        String phoneNumber = activeInvite.getFrom();
+        String displayName = null;
 
-            if (fromDisplayName.equals("Unknown number"))
-                fromDisplayName = callInvite.getFrom();
-            this.textDisplayName.setText(fromDisplayName);
+        // -------------------------
+        // 3️⃣ Get Display Name
+        // -------------------------
 
-            // Phone number
-            this.textPhoneNumber.setText("");
-        } else {
-
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case1111111");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getTo());
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getFrom());
-            Log.e("*Twilio*", "fromDisplayName !" + fromDisplayName + "!");
-            Log.e("*Twilio*", "sharedPreferencesContactData !!");
-            Log.e("*Twilio*", "sharedPreferencesContactData !!!" +
-                    this.sharedPreferencesContactData.getString(callInvite2.getFrom(), "") + "!");
-            Log.e("*Twilio*", "TwilioConstants.callInvite.getCustomParameters().entrySet() case" + callInvite2.getCustomParameters().entrySet());
-
-            if (fromDisplayName.equals("Unknown number"))
-                fromDisplayName = callInvite2.getFrom();
-            this.textDisplayName.setText(fromDisplayName);
-
-            // Phone number
-            this.textPhoneNumber.setText("");
+        // 3.1 From custom parameters
+        Map<String, String> params = activeInvite.getCustomParameters();
+        if (params != null && params.containsKey("fromDisplayName")) {
+            displayName = params.get("fromDisplayName");
         }
 
+        // 3.2 From saved contacts
+        if (displayName == null || displayName.trim().isEmpty()) {
+            String contactName =
+                    PreferencesUtils.getInstance(this).findContactName(phoneNumber);
 
-        // Timer
-        if (status != null && status.equals("callConnected")) {
-            this.startTimer();
+            if (contactName != null && !contactName.trim().isEmpty()) {
+                displayName = contactName;
+            }
+        }
+
+        // 3.3 Fallback to number
+        if (displayName == null || displayName.trim().isEmpty()) {
+            displayName = phoneNumber;
+        }
+
+        textDisplayName.setText(displayName);
+
+        // -------------------------
+        // 4️⃣ Set Phone Number Properly
+        // -------------------------
+
+        if (phoneNumber != null && !phoneNumber.trim().isEmpty()
+                && !phoneNumber.equals(displayName)) {
+
+            textPhoneNumber.setVisibility(View.VISIBLE);
+            textPhoneNumber.setText(phoneNumber);
+
         } else {
-            this.stopTimer();
+            textPhoneNumber.setVisibility(View.GONE);
         }
     }
 
@@ -671,36 +662,43 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
 
 
     private void startTimer() {
-        seconds = 0;
-        this.textTimer.setVisibility(View.VISIBLE);
-        this.textTimer.setText(DateUtils.formatElapsedTime(0));
+        if (isTimerRunning) return;
 
-        if (timer != null) {
-            timer.cancel();
-            timer = null;
-        }
+        isTimerRunning = true;
 
-        timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
+        textTimer.setVisibility(View.VISIBLE);
+
+        timerRunnable = new Runnable() {
             @Override
             public void run() {
-                seconds += 1;
-                runOnUiThread(new TimerTask() {
-                    @Override
-                    public void run() {
-                        textTimer.setText(DateUtils.formatElapsedTime(seconds));
-                    }
-                });
+
+                if (!isTimerRunning || activityDestroyed || isFinishing()) return;
+
+                long elapsedMillis =
+                        System.currentTimeMillis() - callConnectedTime;
+
+                int seconds = (int) (elapsedMillis / 1000);
+
+                textTimer.setText(DateUtils.formatElapsedTime(seconds));
+
+                timerHandler.postDelayed(this, 1000);
             }
-        }, 0, 1000);
+        };
+
+        timerHandler.postDelayed(timerRunnable, 1000);
     }
 
     private void stopTimer() {
-        if (this.timer != null) {
-            this.timer.cancel();
-            this.timer = null;
+        if (!isTimerRunning) return;
+
+        isTimerRunning = false;
+
+        if (timerRunnable != null) {
+            timerHandler.removeCallbacks(timerRunnable);
+            timerRunnable = null;
         }
-        this.textTimer.setVisibility(View.GONE);
+
+        textTimer.setVisibility(View.GONE);
     }
 
 
@@ -722,6 +720,18 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             public void onConnected(@NonNull Call call) {
                 Log.d("TWILIO", "Call connected. Saving active call.");
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
+
+                CallManager manager = CallManager.getInstance();
+
+                if (!manager.isCallConnected) {
+                    manager.isCallConnected = true;
+                    manager.callConnectedTime = System.currentTimeMillis();
+                }
+
+                callConnectedTime = manager.callConnectedTime;
+
+                startTimer();
+
                 stopServiceIncomingCall();
                 updateCallDetails();
             }
@@ -740,7 +750,13 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
             public void onDisconnected(@NonNull Call call, @Nullable CallException callException) {
                 Log.d("TWILIO", "Call disconnected. Clearing active call.");
                 SoundUtils.getInstance(getApplicationContext()).stopRinging();
-                updateCallDetails();
+
+                CallManager manager = CallManager.getInstance();
+                manager.isCallConnected = false;
+                manager.callConnectedTime = 0L;
+
+                stopTimer();
+
                 runOnUiThread(() -> {
                     if (!isFinishing() && !activityDestroyed) {
                         closeWithoutDisconnect();

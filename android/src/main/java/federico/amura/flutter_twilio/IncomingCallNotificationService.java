@@ -39,11 +39,17 @@ import federico.amura.flutter_twilio.Utils.TwilioUtils;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
 public class IncomingCallNotificationService extends Service {
-
+    private boolean isForegroundRunning = false;
     private static final String TAG = IncomingCallNotificationService.class.getSimpleName();
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent == null || intent.getAction() == null) {
+            Log.e(TAG, "Service restarted with null intent");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         String action = intent.getAction();
         Log.e(TAG, "onStartCommand " + action);
         if (action != null) {
@@ -217,9 +223,11 @@ public class IncomingCallNotificationService extends Service {
                             false
                     );
 
-            NotificationManagerCompat
-                    .from(this)
-                    .notify(100, notification);
+            if (notification != null) {
+                NotificationManagerCompat
+                        .from(this)
+                        .notify(100, notification);
+            }
         }
 
         // Inform Flutter layer
@@ -260,10 +268,17 @@ public class IncomingCallNotificationService extends Service {
     }
 
     private void startServiceIncomingCall(CallInvite callInvite) {
+        if (isForegroundRunning) {
+            Log.e(TAG, "Foreground already running");
+            return;
+        }
         Log.e(TAG, "Start service incoming call");
+
+        isForegroundRunning = true;
+
         SoundUtils.getInstance(this).playRinging();
         Notification notification = NotificationUtils.createIncomingCallNotification(getApplicationContext(), callInvite, true);
-        //startForeground(TwilioConstants.NOTIFICATION_INCOMING_CALL, notification);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                     TwilioConstants.NOTIFICATION_INCOMING_CALL,
@@ -280,15 +295,12 @@ public class IncomingCallNotificationService extends Service {
 
     private void stopServiceIncomingCall() {
         Log.e(TAG, "Stop service incoming call");
+        if (!isForegroundRunning) return;
+
+        isForegroundRunning = false;
         SoundUtils.getInstance(this).stopRinging();
         stopForeground(true);
         NotificationUtils.cancel(this, TwilioConstants.NOTIFICATION_INCOMING_CALL);
-    }
-
-    private void stopServiceMissedCall() {
-        Log.e(TAG, "Stop service missed call");
-        stopForeground(true);
-        NotificationUtils.cancel(this, TwilioConstants.NOTIFICATION_MISSED_CALL);
     }
 
     private boolean isLocked() {
@@ -345,27 +357,72 @@ public class IncomingCallNotificationService extends Service {
         notificationManager.cancel(100);
     }
 
-    private void missedCall(Intent intents) {
+    private void missedCall(Intent sourceIntent) {
+        stopServiceIncomingCall();
+        CancelledCallInvite cancelledCallInvite =
+                sourceIntent.getParcelableExtra(
+                        TwilioConstants.EXTRA_CANCELLED_CALL_INVITE
+                );
+
+        if (cancelledCallInvite == null) {
+            Log.e(TAG, "missedCall: CancelledCallInvite is null");
+            return;
+        }
+
         if (!isLocked() && isAppVisible()) {
+
             Intent intent = new Intent();
-            intent.putExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE, intents);
             intent.setAction(TwilioConstants.ACTION_MISSED_CALL);
-            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+            intent.putExtra(
+                    TwilioConstants.EXTRA_CANCELLED_CALL_INVITE,
+                    cancelledCallInvite
+            );
+
+            LocalBroadcastManager
+                    .getInstance(this)
+                    .sendBroadcast(intent);
+
         } else {
+
             stopForeground(true);
-            Log.i(TAG, "missed Call!!!!");
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-            notificationManager.cancelAll();
-            Intent intent = new Intent();
+
+            Log.i(TAG, "Missed call while app not visible");
+
+            NotificationManagerCompat
+                    .from(this)
+                    .cancelAll();
+
+            Intent intent = new Intent(
+                    getApplicationContext(),
+                    BackgroundCallJavaActivity.class
+            );
+
             intent.setFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK |
-                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT |
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
-                            Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
             );
-            intent.putExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE, intents);
+
             intent.setAction(TwilioConstants.ACTION_MISSED_CALL);
+            intent.putExtra(
+                    TwilioConstants.EXTRA_CANCELLED_CALL_INVITE,
+                    cancelledCallInvite
+            );
+
             startActivity(intent);
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        SoundUtils.getInstance(this).stopRinging();
+
+        try {
+            stopForeground(true);
+        } catch (Exception ignored) {}
+
+        Log.e(TAG, "IncomingCallNotificationService destroyed");
     }
 }
