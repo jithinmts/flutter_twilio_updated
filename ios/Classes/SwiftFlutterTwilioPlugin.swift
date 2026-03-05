@@ -277,7 +277,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
                         self.result?(FlutterError(
                             code: "REGISTER_ERROR",
                             message: "Twilio registration failed",
-                            details: error.localizedDescription
+                            error?.localizedDescription ?? "Unknown error"
                         ))
             } else {
                 DispatchQueue.main.async {
