@@ -21,7 +21,6 @@ class FlutterTwilio {
   static FlutterTwilioEvent? get event => _event;
 
   static void init() {
-
     _eventChannel.setMethodCallHandler((event) async {
       log("Call event: ${event.method} . Arguments: ${event.arguments}");
 
@@ -58,16 +57,17 @@ class FlutterTwilio {
           } catch (_) {}
         }
 
-        _streamController.add(
-          FlutterTwilioEvent(eventType, call),
-        );
+        final twilioEvent = FlutterTwilioEvent(eventType, call);
+
+        _event = twilioEvent;
+
+        _streamController.add(twilioEvent);
       } catch (e, stack) {
         log("Twilio stream error",
             error: e,
             stackTrace: stack);
       }
     });
-
   }
 
   static FlutterTwilioStatus getEventType(String event) {
@@ -83,18 +83,11 @@ class FlutterTwilio {
   }
 
   static Stream<FlutterTwilioEvent> get onCallEvent {
-    if (_streamController == null) {
-      return const Stream.empty();
-    }
-    return _streamController!.stream.asBroadcastStream();
+    return _streamController.stream.asBroadcastStream();
   }
 
   static Stream<FlutterTwilioEvent> get onCallConnecting {
-    if (_streamController == null) {
-      return const Stream.empty();
-    }
-
-    return _streamController!.stream
+    return _streamController.stream
         .asBroadcastStream()
         .where(
             (event) => event.status == FlutterTwilioStatus.connecting);
