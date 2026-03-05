@@ -71,7 +71,7 @@ class FlutterTwilio {
   }
 
   static FlutterTwilioStatus getEventType(String event) {
-    print(event);
+    log("Twilio event: $event");
     if (event == "callConnecting") return FlutterTwilioStatus.connecting;
     if (event == "callDisconnected") return FlutterTwilioStatus.disconnected;
     if (event == "missedCall") return FlutterTwilioStatus.missedCall;
@@ -127,7 +127,12 @@ class FlutterTwilio {
       "accessToken": accessToken,
       "fcmToken": fcmToken,
     };
-    await _channel.invokeMethod('register', args);
+
+    try {
+      await _channel.invokeMethod('register', args);
+    } catch (e) {
+      log("Twilio register failed: $e");
+    }
   }
 
   static Future<void> unregister() async {

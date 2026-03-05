@@ -268,13 +268,23 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             if(error != nil){
                 NSLog(error!.localizedDescription)
 
-                self.result?(FlutterError.init(
-                    code: "Error",
-                    message: "Error",
-                    details: "Error"
-                ))
+                // Send event to Flutter
+                        DispatchQueue.main.async {
+                            self.channel?.invokeMethod("registrationFailed", arguments: "")
+                        }
+
+                        // Return error to Flutter
+                        self.result?(FlutterError(
+                            code: "REGISTER_ERROR",
+                            message: "Twilio registration failed",
+                            details: error.localizedDescription
+                        ))
             } else {
-                self.result?("")
+                DispatchQueue.main.async {
+                            self.channel?.invokeMethod("registrationSuccess", arguments: "")
+                        }
+
+                        self.result?("")
             }
             self.result = nil
         }
@@ -813,8 +823,27 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
         }
         
         self.deviceTokenString = credentials.token
-        let deviceToken = deviceTokenString?.reduce("", {$0 + String(format: "%02X", $1) })
-        NSLog("Device token \(String(describing: deviceToken))")
+         let deviceToken = credentials.token.map { String(format: "%02x", $0) }.joined()
+            NSLog("VoIP Device token: \(deviceToken)")
+
+            // ✅ Re-register with Twilio when token updates
+            if let accessToken = getAccessToken() {
+                TwilioVoice.register(accessToken: accessToken, deviceToken: credentials.token) { error in
+                    if let error = error {
+                        NSLog("Twilio registration error: \(error.localizedDescription)")
+
+                        DispatchQueue.main.async {
+                            self.channel?.invokeMethod("registrationFailed", arguments: "")
+                        }
+                    } else {
+                        NSLog("Twilio registration successful")
+
+                        DispatchQueue.main.async {
+                            self.channel?.invokeMethod("registrationSuccess", arguments: "")
+                        }
+                    }
+                }
+            }
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
@@ -864,6 +893,11 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
         if (type == PKPushType.voIP) {
             TwilioVoice.handleNotification(payload.dictionaryPayload, delegate: self, delegateQueue: nil)
         }
+
+        // 🚨 SAFETY FALLBACK (IMPORTANT)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+                self?.incomingPushHandled()
+            }
     }
 }
 
@@ -928,8 +962,8 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
                 action.fail()
             }
         }
-        
-        action.fulfill()
+
+
     }
     
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
