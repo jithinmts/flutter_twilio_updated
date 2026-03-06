@@ -901,9 +901,16 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     
     public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
         NSLog("provider:didActivateAudioSession:")
-        // IMPORTANT
+
             audioDevice.isEnabled = true
-            audioDevice.unblock()
+            do {
+                    try audioSession.setCategory(.playAndRecord,
+                                                 mode: .voiceChat,
+                                                 options: [.allowBluetooth, .defaultToSpeaker])
+                    try audioSession.setActive(true)
+                } catch {
+                    NSLog("Audio session error: \(error.localizedDescription)")
+                }
     }
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
@@ -998,7 +1005,6 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
 
             // 🚨 IMPORTANT: Enable Twilio audio
             audioDevice.isEnabled = true
-            audioDevice.unblock()
 
             // Notify CallKit that call is connected
             self.callKitCompletionCallback?(true)
