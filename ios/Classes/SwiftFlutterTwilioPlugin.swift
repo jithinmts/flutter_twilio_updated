@@ -903,10 +903,11 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         NSLog("provider:didActivateAudioSession:")
 
             audioDevice.isEnabled = true
-            do {
+
+                do {
                     try audioSession.setCategory(.playAndRecord,
                                                  mode: .voiceChat,
-                                                 options: [.allowBluetooth, .defaultToSpeaker])
+                                                 options: [.allowBluetooth])
                     try audioSession.setActive(true)
                 } catch {
                     NSLog("Audio session error: \(error.localizedDescription)")
@@ -926,7 +927,6 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         NSLog("provider:performStartCallAction:")
         
         audioDevice.isEnabled = true
-        audioDevice.block();
 
         provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
 
@@ -946,7 +946,6 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         assert(action.callUUID == self.callInvite?.uuid)
         
         audioDevice.isEnabled = true
-        audioDevice.block();
         
         self.performAnswerVoiceCall(uuid: action.callUUID) { (success) in
             if (success) {
