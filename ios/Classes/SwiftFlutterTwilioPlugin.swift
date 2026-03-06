@@ -318,17 +318,23 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     }
     
     func makeCall(to: String) {
-        if (self.call != nil) {
-            self.result?(FlutterError.init(
-                code: "Already and active call",
-                message: "Already and active call",
-                details: "Already and active call"
-            ))
-            self.result = nil;
-        } else {
+        // Safety cleanup
+            if self.call?.state == .disconnected {
+                self.call = nil
+            }
+
+            if (self.call != nil) {
+                self.result?(FlutterError(
+                    code: "Already and active call",
+                    message: "Already and active call",
+                    details: "Already and active call"
+                ))
+                self.result = nil
+                return
+            }
+
             let uuid = UUID()
             self.performStartCallAction(uuid: uuid)
-        }
     }
     
     
@@ -511,17 +517,18 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
         }
     }
     func callDisconnected(id: UUID, error: String?) {
-//         self.call = nil
-//         self.callInvite = nil
-//         self.fromDisplayName = nil
-//         self.toDisplayName = nil
-//         self.callKitCompletionCallback = nil
-        self.userInitiatedDisconnect = false
 
-        DispatchQueue.main.async {
-            self.callStatus = "callDisconnected"
-            self.channel?.invokeMethod("callDisconnected", arguments: nil)
-        }
+        self.call = nil
+            self.callInvite = nil
+            self.fromDisplayName = nil
+            self.toDisplayName = nil
+            self.callKitCompletionCallback = nil
+            self.userInitiatedDisconnect = false
+
+            DispatchQueue.main.async {
+                self.callStatus = "callDisconnected"
+                self.channel?.invokeMethod("callDisconnected", arguments: nil)
+            }
 
 
         var reason = CXCallEndedReason.remoteEnded
@@ -968,13 +975,14 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         NSLog("provider:performEndCallAction:")
-        
-        if (self.callInvite != nil) {
-            self.callInvite!.reject()
-            self.callInvite = nil
-        } else if (self.call != nil) {
-            self.call?.disconnect()
-        }
+
+            if (self.callInvite != nil) {
+                self.callInvite!.reject()
+                self.callInvite = nil
+            } else if (self.call != nil) {
+                self.call?.disconnect()
+                self.call = nil
+            }
         
         audioDevice.isEnabled = true
         action.fulfill()
