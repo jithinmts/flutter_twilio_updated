@@ -34,6 +34,8 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
         let configuration = CXProviderConfiguration(localizedName: appName)
         configuration.maximumCallGroups = 1
         configuration.maximumCallsPerCallGroup = 1
+        configuration.supportsVideo = false
+        configuration.includesCallsInRecents = false
         if let callKitIcon = UIImage(named: "iconMask80") {
             configuration.iconTemplateImageData = callKitIcon.pngData()
         }
@@ -902,6 +904,15 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
         NSLog("provider:didActivateAudioSession:")
 
+            do {
+                    try audioSession.setCategory(.playAndRecord,
+                                                 mode: .voiceChat,
+                                                 options: [.allowBluetooth, .defaultToSpeaker])
+                    try audioSession.setActive(true)
+                } catch {
+                    NSLog("Audio session error: \(error.localizedDescription)")
+                }
+
             audioDevice.isEnabled = true
     }
     
@@ -917,7 +928,7 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
         NSLog("provider:performStartCallAction:")
         
-        audioDevice.isEnabled = true
+
 
         provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
 
@@ -934,7 +945,7 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         NSLog("provider:performAnswerCallAction:")
 
-            audioDevice.isEnabled = true
+
 
             self.performAnswerVoiceCall(uuid: action.callUUID) { success in
                 if success {
@@ -956,7 +967,7 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
                 call.disconnect()
             }
 
-            audioDevice.isEnabled = true
+           
             action.fulfill()
     }
     
@@ -986,7 +997,7 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
     
     public func callDidConnect(call: Call) {
         NSLog("callDidConnect")
-        
+
             self.call = call
             self.callStatus = "callConnected"
 
