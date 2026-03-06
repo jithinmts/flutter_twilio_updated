@@ -637,13 +637,16 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     
     // MARK: AVAudioSession
     func toggleAudioRoute(toSpeaker: Bool) {
-        // The mode set by the Voice SDK is "VoiceChat" so the default audio route is the built-in receiver. Use port override to switch the route.
         do {
+                let session = AVAudioSession.sharedInstance()
+
                 if toSpeaker {
-                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                    try session.overrideOutputAudioPort(.speaker)
                 } else {
-                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                    try session.overrideOutputAudioPort(.none)
                 }
+
+                try session.setActive(true)
             } catch {
                 NSLog("Audio route error: \(error.localizedDescription)")
             }
@@ -928,10 +931,13 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         audioDevice.isEnabled = true
 
             do {
-                try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
-            } catch {
-                NSLog("Audio route error: \(error.localizedDescription)")
-            }
+                    try audioSession.setCategory(.playAndRecord,
+                                                 mode: .voiceChat,
+                                                 options: [.allowBluetooth])
+                    try audioSession.overrideOutputAudioPort(.none) // ✅ force earpiece
+                } catch {
+                    NSLog("Audio route error: \(error.localizedDescription)")
+                }
     }
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
@@ -965,7 +971,7 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         
         assert(action.callUUID == self.callInvite?.uuid)
         
-        audioDevice.isEnabled = false
+        audioDevice.isEnabled = true
         audioDevice.block();
         
         self.performAnswerVoiceCall(uuid: action.callUUID) { (success) in
@@ -1026,10 +1032,11 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
         self.callKitCompletionCallback = nil
         self.callStatus = "callConnected"
 
-        // ✅ FORCE EARPIECE
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        // ✅ Force EARPIECE after Twilio activates audio
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 do {
-                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                    let session = AVAudioSession.sharedInstance()
+                    try session.overrideOutputAudioPort(.none)
                 } catch {
                     NSLog("Audio route error: \(error.localizedDescription)")
                 }
