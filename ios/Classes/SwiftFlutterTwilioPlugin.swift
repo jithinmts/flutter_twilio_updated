@@ -936,6 +936,7 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
         NSLog("provider:didDeactivateAudioSession:")
+        audioDevice.isEnabled = false
     }
     
     public func provider(_ provider: CXProvider, timedOutPerforming action: CXAction) {
@@ -1019,13 +1020,15 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
     }
     
     public func callDidConnect(call: Call) {
-        NSLog("callDidConnect:")
-        
+        NSLog("callDidConnect")
+
             self.call = call
             self.callStatus = "callConnected"
 
-            audioDevice.isEnabled = true
-            // Tell CallKit the call is connected
+            // 🚨 IMPORTANT: Enable Twilio audio
+            self.audioDevice.isEnabled = true
+
+            // Notify CallKit that call is connected
             self.callKitCompletionCallback?(true)
             self.callKitCompletionCallback = nil
 
