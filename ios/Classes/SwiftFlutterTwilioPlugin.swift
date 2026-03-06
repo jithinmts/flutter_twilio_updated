@@ -43,7 +43,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
         
         //super.init(coder: aDecoder)
         super.init()
-        
+        TwilioVoiceSDK.audioDevice = self.audioDevice
         callKitProvider.setDelegate(self, queue: nil)
         
         voipRegistry.delegate = self
@@ -807,6 +807,8 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             NSLog("No call invite")
             return
         }
+
+        audioDevice.isEnabled = true
         
         let acceptOptions: AcceptOptions = AcceptOptions(callInvite: self.callInvite!) { (builder) in
             builder.uuid = self.callInvite?.uuid
@@ -928,16 +930,8 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     
     public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
         NSLog("provider:didActivateAudioSession:")
-        audioDevice.isEnabled = true
-
-            do {
-                    try audioSession.setCategory(.playAndRecord,
-                                                 mode: .voiceChat,
-                                                 options: [.allowBluetooth])
-                    try audioSession.overrideOutputAudioPort(.none) // ✅ force earpiece
-                } catch {
-                    NSLog("Audio route error: \(error.localizedDescription)")
-                }
+        // IMPORTANT
+            audioDevice.isEnabled = true
     }
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
@@ -1027,22 +1021,17 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
     public func callDidConnect(call: Call) {
         NSLog("callDidConnect:")
         
-        self.call = call
-        self.callKitCompletionCallback!(true)
-        self.callKitCompletionCallback = nil
-        self.callStatus = "callConnected"
+            self.call = call
+            self.callStatus = "callConnected"
 
-        // ✅ Force EARPIECE after Twilio activates audio
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                do {
-                    let session = AVAudioSession.sharedInstance()
-                    try session.overrideOutputAudioPort(.none)
-                } catch {
-                    NSLog("Audio route error: \(error.localizedDescription)")
-                }
+            audioDevice.isEnabled = true
+            // Tell CallKit the call is connected
+            self.callKitCompletionCallback?(true)
+            self.callKitCompletionCallback = nil
+
+            DispatchQueue.main.async {
+                self.channel?.invokeMethod("callConnected", arguments: self.getCallResult())
             }
-
-        self.channel?.invokeMethod("callConnected", arguments: self.getCallResult())
     }
     
     public func callIsReconnecting(call: Call, error: Error) {
