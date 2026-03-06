@@ -150,8 +150,10 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
                 return
             }
             
-            let isSpeaker: Bool = !self.isSpeaker()
-            toggleAudioRoute(toSpeaker: isSpeaker);
+            let isSpeaker = !self.isSpeaker()
+            DispatchQueue.main.async {
+                self.toggleAudioRoute(toSpeaker: isSpeaker)
+            }
             self.channel?.invokeMethod(self.callStatus, arguments: self.getCallResult())
             result(isSpeaker)
             return
@@ -318,19 +320,19 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     }
     
     func makeCall(to: String) {
-        // Safety cleanup
-            if self.call?.state == .disconnected {
-                self.call = nil
-            }
-
-            if (self.call != nil) {
-                self.result?(FlutterError(
-                    code: "Already and active call",
-                    message: "Already and active call",
-                    details: "Already and active call"
-                ))
-                self.result = nil
-                return
+        // ✅ Clear stale call references
+            if let activeCall = self.call {
+                if activeCall.state == .disconnected {
+                    self.call = nil
+                } else {
+                    self.result?(FlutterError(
+                        code: "CALL_ACTIVE",
+                        message: "Another call is already active",
+                        details: "Disconnect existing call first"
+                    ))
+                    self.result = nil
+                    return
+                }
             }
 
             let uuid = UUID()
@@ -517,28 +519,30 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
         }
     }
     func callDisconnected(id: UUID, error: String?) {
+            NSLog("callDisconnected")
 
-        self.call = nil
-            self.callInvite = nil
-            self.fromDisplayName = nil
-            self.toDisplayName = nil
-            self.callKitCompletionCallback = nil
-            self.userInitiatedDisconnect = false
+                var reason = CXCallEndedReason.remoteEnded
 
-            DispatchQueue.main.async {
-                self.callStatus = "callDisconnected"
-                self.channel?.invokeMethod("callDisconnected", arguments: nil)
-            }
+                if error != nil {
+                    NSLog("Call disconnected due to error")
+                    reason = .failed
+                }
 
+                // Report to CallKit first
+                self.callKitProvider.reportCall(with: id, endedAt: Date(), reason: reason)
 
-        var reason = CXCallEndedReason.remoteEnded
+                // Then cleanup
+                self.call = nil
+                self.callInvite = nil
+                self.fromDisplayName = nil
+                self.toDisplayName = nil
+                self.callKitCompletionCallback = nil
+                self.userInitiatedDisconnect = false
 
-        if error != nil {
-            NSLog("Hubo un error en el did disconect, entonces pongo que se corta por un error")
-            reason = .failed
-        }
-
-        self.callKitProvider.reportCall(with: id, endedAt: Date(), reason: reason)
+                DispatchQueue.main.async {
+                    self.callStatus = "callDisconnected"
+                    self.channel?.invokeMethod("callDisconnected", arguments: nil)
+                }
 
     }
     func callDisconnectedMissCall(id: UUID, error: String?,cancelledCallInvite: CancelledCallInvite) {
@@ -634,19 +638,15 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     // MARK: AVAudioSession
     func toggleAudioRoute(toSpeaker: Bool) {
         // The mode set by the Voice SDK is "VoiceChat" so the default audio route is the built-in receiver. Use port override to switch the route.
-        audioDevice.block = {
-            DefaultAudioDevice.DefaultAVAudioSessionConfigurationBlock()
-            do {
-                if (toSpeaker) {
+        do {
+                if toSpeaker {
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                 } else {
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                 }
             } catch {
-                NSLog(error.localizedDescription)
+                NSLog("Audio route error: \(error.localizedDescription)")
             }
-        }
-        audioDevice.block()
     }
     
     
@@ -945,25 +945,19 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
         NSLog("provider:performStartCallAction:")
         
-        audioDevice.isEnabled = false
+        audioDevice.isEnabled = true
         audioDevice.block();
 
-        do {
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
-        } catch {
-            NSLog("Audio route error: \(error.localizedDescription)")
-        }
-        
         provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
-        
-        self.performVoiceCall(uuid: action.callUUID) { (success) in
-            if (success) {
-                provider.reportOutgoingCall(with: action.callUUID, connectedAt: Date())
-                action.fulfill()
-            } else {
-                action.fail()
+
+            self.performVoiceCall(uuid: action.callUUID) { (success) in
+                if success {
+                    provider.reportOutgoingCall(with: action.callUUID, connectedAt: Date())
+                    action.fulfill()
+                } else {
+                    action.fail()
+                }
             }
-        }
     }
     
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
@@ -1031,6 +1025,16 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
         self.callKitCompletionCallback!(true)
         self.callKitCompletionCallback = nil
         self.callStatus = "callConnected"
+
+        // ✅ FORCE EARPIECE
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                do {
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                } catch {
+                    NSLog("Audio route error: \(error.localizedDescription)")
+                }
+            }
+
         self.channel?.invokeMethod("callConnected", arguments: self.getCallResult())
     }
     
@@ -1060,21 +1064,6 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
     
     public func callDidDisconnect(call: Call, error: Error?) {
         NSLog("callDidDisconnect: \(error?.localizedDescription)")
-        
-//         if !self.userInitiatedDisconnect {
-//             NSLog("Como yo no inicie el hangup, Mando a cortar callkit")
-//
-//             var reason = CXCallEndedReason.remoteEnded
-//
-//             if error != nil {
-//                 NSLog("Hubo un error en el did disconect, entonces pongo que se corta por un error")
-//                 reason = .failed
-//             }
-//
-//             self.callKitProvider.reportCall(with: call.uuid!, endedAt: Date(), reason: reason)
-//         } else {
-//             NSLog("Yo inicie el hang up, entonces no corto el call kit desde aca")
-//         }
         callDisconnected(id: call.uuid!, error: nil)
     }
     public func sendDigits (digits: String) {
