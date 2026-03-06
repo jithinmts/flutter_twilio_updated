@@ -926,6 +926,12 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
         NSLog("provider:didActivateAudioSession:")
         audioDevice.isEnabled = true
+
+            do {
+                try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+            } catch {
+                NSLog("Audio route error: \(error.localizedDescription)")
+            }
     }
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
@@ -941,6 +947,12 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         
         audioDevice.isEnabled = false
         audioDevice.block();
+
+        do {
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+        } catch {
+            NSLog("Audio route error: \(error.localizedDescription)")
+        }
         
         provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
         
