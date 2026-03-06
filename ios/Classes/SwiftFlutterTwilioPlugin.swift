@@ -43,7 +43,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
         
         //super.init(coder: aDecoder)
         super.init()
-        TwilioVoiceSDK.audioDevice = self.audioDevice
+        TwilioVoice.audioDevice = self.audioDevice
         callKitProvider.setDelegate(self, queue: nil)
         
         voipRegistry.delegate = self
