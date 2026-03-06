@@ -637,16 +637,14 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     
     // MARK: AVAudioSession
     func toggleAudioRoute(toSpeaker: Bool) {
-        do {
-                let session = AVAudioSession.sharedInstance()
+        let session = AVAudioSession.sharedInstance()
 
+            do {
                 if toSpeaker {
                     try session.overrideOutputAudioPort(.speaker)
                 } else {
                     try session.overrideOutputAudioPort(.none)
                 }
-
-                try session.setActive(true)
             } catch {
                 NSLog("Audio route error: \(error.localizedDescription)")
             }
@@ -710,38 +708,11 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     }
     
     func performEndCallAction(uuid: UUID) {
+        if let activeCall = self.call {
+                activeCall.disconnect()
+            }
 
-        if self.call == nil {
-//            return;
-        }
-
-        self.call?.disconnect()
-        self.call = nil
-        self.callInvite = nil
-        self.result?("")
-        self.result = nil
-
-        self.callDisconnected(id: uuid, error: nil)
-//         let endCallAction = CXEndCallAction(call: uuid)
-//         let transaction = CXTransaction(action: endCallAction)
-//
-//         callKitCallController.request(transaction) { error in
-//             if error != nil {
-//                 NSLog("Error ending call:")
-//                 self.result?(FlutterError.init(
-//                     code: "Error",
-//                     message: "Error",
-//                     details: "Error"
-//                 ))
-//
-//                 self.result = nil
-//             } else {
-//                 self.call = nil
-//                 self.callInvite = nil
-//                 self.result?("")
-//                 self.result = nil
-//             }
-//         }
+            self.userInitiatedDisconnect = true
     }
     func performMissedCallAction(uuid: UUID,cancelledCallInvite: CancelledCallInvite) {
 
@@ -932,6 +903,7 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         NSLog("provider:didActivateAudioSession:")
         // IMPORTANT
             audioDevice.isEnabled = true
+            audioDevice.unblock()
     }
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
@@ -983,16 +955,15 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         NSLog("provider:performEndCallAction:")
 
-            if (self.callInvite != nil) {
-                self.callInvite!.reject()
+            if let invite = self.callInvite {
+                invite.reject()
                 self.callInvite = nil
-            } else if (self.call != nil) {
-                self.call?.disconnect()
-                self.call = nil
+            } else if let call = self.call {
+                call.disconnect()
             }
-        
-        audioDevice.isEnabled = true
-        action.fulfill()
+
+            audioDevice.isEnabled = true
+            action.fulfill()
     }
     
     public func provider(_ provider: CXProvider, perform action: CXSetHeldCallAction) {
@@ -1026,7 +997,8 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
             self.callStatus = "callConnected"
 
             // 🚨 IMPORTANT: Enable Twilio audio
-            self.audioDevice.isEnabled = true
+            audioDevice.isEnabled = true
+            audioDevice.unblock()
 
             // Notify CallKit that call is connected
             self.callKitCompletionCallback?(true)
@@ -1068,6 +1040,28 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
     public func sendDigits (digits: String) {
             self.call?.sendDigits(digits)
         }
+
+    public func call(_ call: Call, didDisconnectWithError error: Error?) {
+        NSLog("Twilio call disconnected")
+
+        let uuid = call.uuid
+
+        self.call = nil
+        self.callInvite = nil
+        self.fromDisplayName = nil
+        self.toDisplayName = nil
+        self.callKitCompletionCallback = nil
+        self.userInitiatedDisconnect = false
+
+        DispatchQueue.main.async {
+            self.callStatus = "callDisconnected"
+            self.channel?.invokeMethod("callDisconnected", arguments: nil)
+        }
+
+        if let uuid = uuid {
+            self.callKitProvider.reportCall(with: uuid, endedAt: Date(), reason: .remoteEnded)
+        }
+    }
 }
 
 extension UIWindow {
