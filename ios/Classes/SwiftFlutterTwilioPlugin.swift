@@ -773,24 +773,24 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     }
     
     func performAnswerVoiceCall(uuid: UUID, completionHandler: @escaping (Bool) -> Swift.Void) {
-        
-        if self.callInvite == nil {
-            NSLog("No call invite")
-            return
-        }
 
-        audioDevice.isEnabled = true
-        
-        let acceptOptions: AcceptOptions = AcceptOptions(callInvite: self.callInvite!) { (builder) in
-            builder.uuid = self.callInvite?.uuid
-        }
-        
-        self.callStatus = "callConnecting"
-        self.channel?.invokeMethod("callConnecting", arguments: self.getCallResult())
-        call = self.callInvite!.accept(options: acceptOptions, delegate: self)
-        
-        self.callKitCompletionCallback = completionHandler
-        self.incomingPushHandled()
+       guard let invite = self.callInvite else {
+               NSLog("No call invite")
+               completionHandler(false)
+               return
+           }
+
+           let acceptOptions = AcceptOptions(callInvite: invite) { builder in
+               builder.uuid = invite.uuid
+           }
+
+           self.callStatus = "callConnecting"
+           self.channel?.invokeMethod("callConnecting", arguments: self.getCallResult())
+
+           self.call = invite.accept(options: acceptOptions, delegate: self)
+
+           self.callKitCompletionCallback = completionHandler
+           self.incomingPushHandled()
     }
 }
 
@@ -903,15 +903,6 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
         NSLog("provider:didActivateAudioSession:")
 
             audioDevice.isEnabled = true
-
-                do {
-                    try audioSession.setCategory(.playAndRecord,
-                                                 mode: .voiceChat,
-                                                 options: [.allowBluetooth])
-                    try audioSession.setActive(true)
-                } catch {
-                    NSLog("Audio session error: \(error.localizedDescription)")
-                }
     }
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
@@ -942,19 +933,16 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
     
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         NSLog("provider:performAnswerCallAction:")
-        
-        assert(action.callUUID == self.callInvite?.uuid)
-        
-        audioDevice.isEnabled = true
-        
-        self.performAnswerVoiceCall(uuid: action.callUUID) { (success) in
-            if (success) {
-                action.fulfill()
-            } else {
-                action.fail()
-            }
-        }
 
+            audioDevice.isEnabled = true
+
+            self.performAnswerVoiceCall(uuid: action.callUUID) { success in
+                if success {
+                    action.fulfill()
+                } else {
+                    action.fail()
+                }
+            }
 
     }
     
@@ -998,14 +986,12 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
     
     public func callDidConnect(call: Call) {
         NSLog("callDidConnect")
-
+        
             self.call = call
             self.callStatus = "callConnected"
 
-            // 🚨 IMPORTANT: Enable Twilio audio
             audioDevice.isEnabled = true
 
-            // Notify CallKit that call is connected
             self.callKitCompletionCallback?(true)
             self.callKitCompletionCallback = nil
 
