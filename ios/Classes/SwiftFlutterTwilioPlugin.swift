@@ -60,21 +60,6 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             return nil
         }
 
-        if channel != nil {
-            return channel
-        }
-
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first,
-              let controller = window.rootViewController as? FlutterViewController else {
-            return nil
-        }
-
-        channel = FlutterMethodChannel(
-            name: "flutter_twilio_response",
-            binaryMessenger: controller.binaryMessenger
-        )
-
         return channel
     }
     
@@ -86,8 +71,17 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = SwiftFlutterTwilioPlugin()
-        let methodChannel = FlutterMethodChannel(name: "flutter_twilio", binaryMessenger: registrar.messenger())
-        registrar.addMethodCallDelegate(instance, channel: methodChannel)
+        let methodChannel = FlutterMethodChannel(
+                name: "flutter_twilio",
+                binaryMessenger: registrar.messenger()
+            )
+
+            instance.channel = FlutterMethodChannel(
+                name: "flutter_twilio_response",
+                binaryMessenger: registrar.messenger()
+            )
+
+            registrar.addMethodCallDelegate(instance, channel: methodChannel)
     }
     
     public func handle(_ flutterCall: FlutterMethodCall, result: @escaping FlutterResult) {
