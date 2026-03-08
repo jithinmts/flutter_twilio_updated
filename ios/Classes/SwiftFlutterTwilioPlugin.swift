@@ -51,17 +51,31 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
         voipRegistry.delegate = self
         voipRegistry.desiredPushTypes = Set([PKPushType.voIP])
         
-        
-        let appDelegate = UIApplication.shared.delegate
-        guard let controller = appDelegate?.window??.rootViewController as? FlutterViewController else {
-            fatalError("rootViewController is not type FlutterViewController")
+    }
+
+    func getChannel() -> FlutterMethodChannel? {
+
+        // Do not create channel if app is not active
+        if UIApplication.shared.applicationState != .active {
+            return nil
         }
-        
+
+        if channel != nil {
+            return channel
+        }
+
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let controller = window.rootViewController as? FlutterViewController else {
+            return nil
+        }
+
         channel = FlutterMethodChannel(
             name: "flutter_twilio_response",
             binaryMessenger: controller.binaryMessenger
         )
-        
+
+        return channel
     }
     
     deinit {
@@ -104,7 +118,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             self.result = result
 
             makeCall(to: callTo)
-            self.channel?.invokeMethod("callConnecting", arguments: self.getCallResult())
+            self.getChannel()?.invokeMethod("callConnecting", arguments: self.getCallResult())
             return
         }
         
@@ -121,7 +135,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             
             let isMuted: Bool = !self.call!.isMuted
             self.call!.isMuted = isMuted
-            self.channel?.invokeMethod(self.callStatus, arguments: self.getCallResult())
+            self.getChannel()?.invokeMethod(self.callStatus, arguments: self.getCallResult())
             result(isMuted)
             return
         }
@@ -156,7 +170,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             DispatchQueue.main.async {
                 self.toggleAudioRoute(toSpeaker: isSpeaker)
             }
-            self.channel?.invokeMethod(self.callStatus, arguments: self.getCallResult())
+            self.getChannel()?.invokeMethod(self.callStatus, arguments: self.getCallResult())
             result(isSpeaker)
             return
         }
@@ -274,7 +288,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
 
                 // Send event to Flutter
                         DispatchQueue.main.async {
-                            self.channel?.invokeMethod("registrationFailed", arguments: "")
+                            self.getChannel()?.invokeMethod("registrationFailed", arguments: "")
                         }
 
                         // Return error to Flutter
@@ -285,7 +299,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
                         ))
             } else {
                 DispatchQueue.main.async {
-                            self.channel?.invokeMethod("registrationSuccess", arguments: "")
+                            self.getChannel()?.invokeMethod("registrationSuccess", arguments: "")
                         }
 
                         self.result?("")
@@ -543,7 +557,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
 
                 DispatchQueue.main.async {
                     self.callStatus = "callDisconnected"
-                    self.channel?.invokeMethod("callDisconnected", arguments: nil)
+                    self.getChannel()?.invokeMethod("callDisconnected", arguments: nil)
                 }
 
     }
@@ -557,7 +571,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
 
         DispatchQueue.main.async {
             self.callStatus = "missedCall"
-            self.channel?.invokeMethod("missedCall", arguments: self.getCallResult())
+            self.getChannel()?.invokeMethod("missedCall", arguments: self.getCallResult())
         }
 
 
@@ -790,7 +804,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
            }
 
            self.callStatus = "callConnecting"
-           //self.channel?.invokeMethod("callConnecting", arguments: self.getCallResult())
+           //self.getChannel()?.invokeMethod("callConnecting", arguments: self.getCallResult())
 
            self.call = invite.accept(options: acceptOptions, delegate: self)
 
@@ -821,13 +835,13 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
                         NSLog("Twilio registration error: \(error.localizedDescription)")
 
                         DispatchQueue.main.async {
-                            self.channel?.invokeMethod("registrationFailed", arguments: "")
+                            self.getChannel()?.invokeMethod("registrationFailed", arguments: "")
                         }
                     } else {
                         NSLog("Twilio registration successful")
 
                         DispatchQueue.main.async {
-                            self.channel?.invokeMethod("registrationSuccess", arguments: "")
+                            self.getChannel()?.invokeMethod("registrationSuccess", arguments: "")
                         }
                     }
                 }
@@ -995,7 +1009,9 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
         NSLog("callDidStartRinging:")
         
         self.callStatus = "callRinging"
-        self.channel?.invokeMethod("callRinging", arguments: self.getCallResult())
+        if UIApplication.shared.applicationState == .active {
+            self.getChannel()?.invokeMethod("callRinging", arguments: self.getCallResult())
+        }
     }
     
     public func callDidConnect(call: Call) {
@@ -1009,12 +1025,10 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
             self.callKitCompletionCallback?(true)
             self.callKitCompletionCallback = nil
 
-            /* DispatchQueue.main.async {
-                self.channel?.invokeMethod("callConnected", arguments: self.getCallResult())
-            } */
+
             DispatchQueue.main.async {
                 if UIApplication.shared.applicationState == .active {
-                    self.channel?.invokeMethod("callConnected", arguments: self.getCallResult())
+                    self.getChannel()?.invokeMethod("callConnected", arguments: self.getCallResult())
                 }
             }
     }
@@ -1023,14 +1037,18 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
         NSLog("call:isReconnectingWithError:")
         
         self.callStatus = "callReconnecting"
-        self.channel?.invokeMethod("callReconnecting", arguments: self.getCallResult())
+        if UIApplication.shared.applicationState == .active {
+             self.getChannel()?.invokeMethod("callReconnecting", arguments: self.getCallResult())
+        }
     }
     
     public func callDidReconnect(call: Call) {
         NSLog("callDidReconnect:")
         
         self.callStatus = "callReconnected"
-        self.channel?.invokeMethod("callReconnected", arguments: self.getCallResult())
+        if UIApplication.shared.applicationState == .active {
+             self.getChannel()?.invokeMethod("callReconnected", arguments: self.getCallResult())
+        }
     }
     
     public func callDidFailToConnect(call: Call, error: Error) {
@@ -1065,7 +1083,7 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
 
         DispatchQueue.main.async {
             self.callStatus = "callDisconnected"
-            self.channel?.invokeMethod("callDisconnected", arguments: nil)
+            self.getChannel()?.invokeMethod("callDisconnected", arguments: nil)
         }
 
         if let uuid = uuid {
