@@ -907,7 +907,7 @@ extension SwiftFlutterTwilioPlugin : CXProviderDelegate {
             do {
                     try audioSession.setCategory(.playAndRecord,
                                                  mode: .voiceChat,
-                                                 options: [.allowBluetooth, .defaultToSpeaker])
+                                                 options: [.allowBluetooth])
                     try audioSession.setActive(true)
                 } catch {
                     NSLog("Audio session error: \(error.localizedDescription)")
