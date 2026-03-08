@@ -639,14 +639,17 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     
     // MARK: AVAudioSession
     func toggleAudioRoute(toSpeaker: Bool) {
-        let session = AVAudioSession.sharedInstance()
+        let audioSession = AVAudioSession.sharedInstance()
 
             do {
-                if toSpeaker {
-                    try session.overrideOutputAudioPort(.speaker)
-                } else {
-                    try session.overrideOutputAudioPort(.none)
-                }
+                  try audioSession.setActive(true)
+                  if toSpeaker {
+                              try audioSession.overrideOutputAudioPort(.speaker)
+                          } else {
+                              try audioSession.overrideOutputAudioPort(.none)
+                          }
+
+                          NSLog("Speaker toggled: \(toSpeaker)")
             } catch {
                 NSLog("Audio route error: \(error.localizedDescription)")
             }
