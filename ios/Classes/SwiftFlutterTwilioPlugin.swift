@@ -790,7 +790,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
            }
 
            self.callStatus = "callConnecting"
-           self.channel?.invokeMethod("callConnecting", arguments: self.getCallResult())
+           //self.channel?.invokeMethod("callConnecting", arguments: self.getCallResult())
 
            self.call = invite.accept(options: acceptOptions, delegate: self)
 
@@ -1009,8 +1009,13 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
             self.callKitCompletionCallback?(true)
             self.callKitCompletionCallback = nil
 
-            DispatchQueue.main.async {
+            /* DispatchQueue.main.async {
                 self.channel?.invokeMethod("callConnected", arguments: self.getCallResult())
+            } */
+            DispatchQueue.main.async {
+                if UIApplication.shared.applicationState == .active {
+                    self.channel?.invokeMethod("callConnected", arguments: self.getCallResult())
+                }
             }
     }
     
