@@ -25,7 +25,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     var callKitCallController: CXCallController
     var userInitiatedDisconnect: Bool = false
     var channel: FlutterMethodChannel?
-    
+    var isRegistering = false
     public override init() {
         
         //isSpinning = false
@@ -721,11 +721,19 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     }
     
     func performEndCallAction(uuid: UUID) {
+        NSLog("performEndCallAction")
         if let activeCall = self.call {
                 activeCall.disconnect()
             }
 
             self.userInitiatedDisconnect = true
+
+            // Tell CallKit the call ended
+                self.callKitProvider.reportCall(with: uuid, endedAt: Date(), reason: .remoteEnded)
+
+                // Clean local references
+                self.call = nil
+                self.callInvite = nil
     }
     func performMissedCallAction(uuid: UUID,cancelledCallInvite: CancelledCallInvite) {
 
@@ -810,38 +818,21 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
 
 // MARK: PKPushRegistryDelegate
 extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
-    
-    public func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
-        NSLog("pushRegistry:didUpdatePushCredentials:forType:")
-        
-        if (type != .voIP) {
-            return
+
+        public func pushRegistry(_ registry: PKPushRegistry,
+                                 didUpdate credentials: PKPushCredentials,
+                                 for type: PKPushType) {
+
+            NSLog("pushRegistry:didUpdatePushCredentials")
+
+                guard type == .voIP else { return }
+
+                self.deviceTokenString = credentials.token
+
+                let deviceToken = credentials.token.map { String(format: "%02x", $0) }.joined()
+                NSLog("VoIP Device token: \(deviceToken)")
         }
-        
-        self.deviceTokenString = credentials.token
-         let deviceToken = credentials.token.map { String(format: "%02x", $0) }.joined()
-            NSLog("VoIP Device token: \(deviceToken)")
 
-            // ✅ Re-register with Twilio when token updates
-            if let accessToken = getAccessToken() {
-                TwilioVoice.register(accessToken: accessToken, deviceToken: credentials.token) { error in
-                    if let error = error {
-                        NSLog("Twilio registration error: \(error.localizedDescription)")
-
-                        DispatchQueue.main.async {
-                            self.getChannel()?.invokeMethod("registrationFailed", arguments: "")
-                        }
-                    } else {
-                        NSLog("Twilio registration successful")
-
-                        DispatchQueue.main.async {
-                            self.getChannel()?.invokeMethod("registrationSuccess", arguments: "")
-                        }
-                    }
-                }
-            }
-    }
-    
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
         NSLog("pushRegistry:didInvalidatePushTokenForType:")
         
@@ -873,7 +864,7 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
         NSLog("pushRegistry:didReceiveIncomingPushWithPayload:forType:")
         
         if (type == PKPushType.voIP) {
-            TwilioVoice.handleNotification(payload.dictionaryPayload, delegate: self, delegateQueue: nil)
+            TwilioVoice.handleNotification(payload.dictionaryPayload, delegate: self, delegateQueue: DispatchQueue.main)
         }
     }
     
@@ -887,7 +878,7 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
         self.incomingPushCompletionCallback = completion
         
         if (type == PKPushType.voIP) {
-            TwilioVoice.handleNotification(payload.dictionaryPayload, delegate: self, delegateQueue: nil)
+            TwilioVoice.handleNotification(payload.dictionaryPayload, delegate: self, delegateQueue: DispatchQueue.main)
         }
 
         // 🚨 SAFETY FALLBACK (IMPORTANT)
@@ -1055,10 +1046,10 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
         callDisconnected(id: call.uuid!, error: error.localizedDescription)
     }
     
-    public func callDidDisconnect(call: Call, error: Error?) {
+    /* public func callDidDisconnect(call: Call, error: Error?) {
         NSLog("callDidDisconnect: \(error?.localizedDescription)")
         callDisconnected(id: call.uuid!, error: nil)
-    }
+    } */
     public func sendDigits (digits: String) {
             self.call?.sendDigits(digits)
         }
