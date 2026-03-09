@@ -1040,10 +1040,10 @@ extension SwiftFlutterTwilioPlugin : CallDelegate {
         callDisconnected(id: call.uuid!, error: error.localizedDescription)
     }
     
-    /* public func callDidDisconnect(call: Call, error: Error?) {
+    public func callDidDisconnect(call: Call, error: Error?) {
         NSLog("callDidDisconnect: \(error?.localizedDescription)")
         callDisconnected(id: call.uuid!, error: nil)
-    } */
+    }
     public func sendDigits (digits: String) {
             self.call?.sendDigits(digits)
         }
