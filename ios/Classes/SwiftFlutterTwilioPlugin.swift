@@ -721,13 +721,6 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             }
 
             self.userInitiatedDisconnect = true
-
-            // Tell CallKit the call ended
-                self.callKitProvider.reportCall(with: uuid, endedAt: Date(), reason: .remoteEnded)
-
-                // Clean local references
-                self.call = nil
-                self.callInvite = nil
     }
     func performMissedCallAction(uuid: UUID,cancelledCallInvite: CancelledCallInvite) {
 
