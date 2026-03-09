@@ -54,12 +54,6 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
     }
 
     func getChannel() -> FlutterMethodChannel? {
-
-        // Do not create channel if app is not active
-        if UIApplication.shared.applicationState != .active {
-            return nil
-        }
-
         return channel
     }
     
