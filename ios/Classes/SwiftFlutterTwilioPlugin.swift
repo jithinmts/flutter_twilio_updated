@@ -849,7 +849,7 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
      */
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
         NSLog("pushRegistry:didReceiveIncomingPushWithPayload:forType:")
-        
+        print("VoIP payload01: \(payload.dictionaryPayload)")
         if (type == PKPushType.voIP) {
             TwilioVoice.handleNotification(payload.dictionaryPayload, delegate: self, delegateQueue: DispatchQueue.main)
         }
@@ -861,6 +861,7 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
      */
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
         NSLog("pushRegistry:didReceiveIncomingPushWithPayload:forType:completion:")
+        print("VoIP payload02: \(payload.dictionaryPayload)")
         // Save for later when the notification is properly handled.
         self.incomingPushCompletionCallback = completion
         
