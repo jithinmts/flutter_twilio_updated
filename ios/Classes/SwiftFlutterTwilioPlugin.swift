@@ -711,6 +711,7 @@ public class SwiftFlutterTwilioPlugin: NSObject, FlutterPlugin,   NotificationDe
             } else {
                 NSLog("Incoming call successfully reported.")
             }
+            self.incomingPushHandled()
         }
     }
     
@@ -868,11 +869,6 @@ extension SwiftFlutterTwilioPlugin : PKPushRegistryDelegate {
         if (type == PKPushType.voIP) {
             TwilioVoice.handleNotification(payload.dictionaryPayload, delegate: self, delegateQueue: DispatchQueue.main)
         }
-
-        // 🚨 SAFETY FALLBACK (IMPORTANT)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
-                self?.incomingPushHandled()
-            }
     }
 }
 
