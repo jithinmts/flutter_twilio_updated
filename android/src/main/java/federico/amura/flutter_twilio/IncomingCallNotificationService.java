@@ -161,6 +161,13 @@ public class IncomingCallNotificationService extends Service {
             return;
         }
 
+        // Let the Flutter layer know a call is ringing so it can show its own incoming UI.
+        // Only reaches Dart when the engine is alive; otherwise the notification handles it.
+        Intent informIntent = new Intent();
+        informIntent.setAction(TwilioConstants.ACTION_INCOMING_CALL);
+        informIntent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, callInvite);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(informIntent);
+
         this.startServiceIncomingCall(callInvite);
     }
 
@@ -188,7 +195,7 @@ public class IncomingCallNotificationService extends Service {
         if (callInvite != null) {
             try {
                 Log.e(TAG, "Rejecting invite SID = " + callInvite.getCallSid());
-                callInvite.reject(this);  // 🔥 ALWAYS use the invite from intent
+                TwilioUtils.getInstance(this).rejectInvite(callInvite);
             } catch (Exception e) {
                 e.printStackTrace();
             }

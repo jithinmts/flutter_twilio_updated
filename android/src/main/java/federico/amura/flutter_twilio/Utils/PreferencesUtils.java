@@ -72,11 +72,14 @@ public class PreferencesUtils {
 
                 String phoneNumber = keyValue.getKey();
                 String displayName = (String) item.get("displayName");
+                String photoURL = (String) item.get("photoURL");
 
                 if (displayName == null) displayName = "";
+                if (photoURL == null) photoURL = "";
 
-                // ✅ Store in correct format
-                editor.putString(phoneNumber, displayName);
+                // Stored as "displayName;photoURL". Values written by older versions have
+                // no separator, which still parses correctly as just the display name.
+                editor.putString(phoneNumber, displayName + ";" + photoURL);
 
                 i++;
             }
@@ -112,6 +115,28 @@ public class PreferencesUtils {
         } catch (Exception e) {
             Log.e(TAG, "Error finding the contact display name for " + phoneNumber + ". Error: " + e.getMessage());
             return defaultDisplayName;
+        }
+    }
+
+    /**
+     * Returns the stored photo URL for a number, or null when none was supplied.
+     * Values stored by older versions contain no separator and yield null here.
+     */
+    public String findContactPhotoUrl(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) return null;
+
+        final String value = this.sharedPreferencesContactData.getString(phoneNumber, null);
+        if (value == null || value.isEmpty()) return null;
+
+        try {
+            final String[] parts = value.split(";");
+            if (parts.length < 2) return null;
+
+            final String photoUrl = parts[1].trim();
+            return photoUrl.isEmpty() ? null : photoUrl;
+        } catch (Exception e) {
+            Log.e(TAG, "Error finding the contact photo url for " + phoneNumber + ". Error: " + e.getMessage());
+            return null;
         }
     }
 

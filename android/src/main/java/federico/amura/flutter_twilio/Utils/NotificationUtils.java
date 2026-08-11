@@ -183,9 +183,7 @@ public class NotificationUtils {
 
         Intent returnCallIntent = new Intent(context, BackgroundCallJavaActivity.class);
         returnCallIntent.setAction(TwilioConstants.ACTION_RETURN_CALL);
-        returnCallIntent.putExtra(cancelledCallInvite.getTo(), "to");
-        returnCallIntent.putExtra(cancelledCallInvite.getFrom(), "callerId");
-        returnCallIntent.putExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE, cancelledCallInvite);
+        returnCallIntent.putExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE, cancelledCallInvite);
 //        returnCallIntent.setFlags(
 //                Intent.FLAG_ACTIVITY_NEW_TASK |
 //                        Intent.FLAG_ACTIVITY_NEW_DOCUMENT |
@@ -201,9 +199,11 @@ public class NotificationUtils {
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE : PendingIntent.FLAG_UPDATE_CURRENT
         );
 
-        //Intent LaunchIntent = context.getPackageManager().getLaunchIntentForPackage("com.tch.crm");
         Intent LaunchIntent = context.getPackageManager()
                 .getLaunchIntentForPackage(context.getPackageName());
+        if (LaunchIntent == null) {
+            LaunchIntent = new Intent();
+        }
         LaunchIntent.setAction(TwilioConstants.ACTION_MISSED_CALL);
         LaunchIntent.putExtra("TwilioConstant", "cancelledCallInvite");
         LaunchIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);

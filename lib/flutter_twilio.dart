@@ -4,11 +4,22 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 import 'model/call.dart';
 import 'model/contact_data.dart';
 import 'model/event.dart';
 import 'model/status.dart';
+
+/// Keeps the native side's notion of foreground/background in sync. Android uses it to
+/// decide between routing an accepted call into the Flutter UI and launching its own
+/// full-screen call activity.
+class _FlutterTwilioLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    FlutterTwilio.setForeground(state == AppLifecycleState.resumed);
+  }
+}
 
 class FlutterTwilio {
   static const MethodChannel _channel = MethodChannel('flutter_twilio');
@@ -18,30 +29,53 @@ class FlutterTwilio {
   static final StreamController<FlutterTwilioEvent> _streamController = StreamController<FlutterTwilioEvent>.broadcast();
   static FlutterTwilioEvent? _event;
 
+  static final _FlutterTwilioLifecycleObserver _lifecycleObserver =
+      _FlutterTwilioLifecycleObserver();
+  static bool _lifecycleObserverRegistered = false;
+
   static FlutterTwilioEvent? get event => _event;
 
+  /// Registers the app-lifecycle observer that drives [setForeground]. Without this the
+  /// native foreground flag stays at its default of `false` forever, so Android always
+  /// launches its own call screen over the Flutter UI.
+  static void _registerLifecycleObserver() {
+    if (kIsWeb) return;
+    if (_lifecycleObserverRegistered) return;
+    _lifecycleObserverRegistered = true;
+
+    final binding = WidgetsFlutterBinding.ensureInitialized();
+    binding.addObserver(_lifecycleObserver);
+
+    // Seed the native side with the current state rather than waiting for the first
+    // transition, which may not arrive until well after the first call.
+    final state = binding.lifecycleState;
+    setForeground(state == null || state == AppLifecycleState.resumed);
+  }
+
   static void init() {
+    _registerLifecycleObserver();
+
     _eventChannel.setMethodCallHandler((event) async {
       log("Call event: ${event.method} . Arguments: ${event.arguments}");
 
       try {
         if (event.method == "registrationFailed") {
-          _streamController.add(
-            FlutterTwilioEvent(
-              FlutterTwilioStatus.registerError,
-              null,
-            ),
+          final twilioEvent = FlutterTwilioEvent(
+            FlutterTwilioStatus.registerError,
+            null,
           );
+          _event = twilioEvent;
+          _streamController.add(twilioEvent);
           return;
         }
 
         if (event.method == "registrationSuccess") {
-          _streamController.add(
-            FlutterTwilioEvent(
-              FlutterTwilioStatus.registerSuccess,
-              null,
-            ),
+          final twilioEvent = FlutterTwilioEvent(
+            FlutterTwilioStatus.registerSuccess,
+            null,
           );
+          _event = twilioEvent;
+          _streamController.add(twilioEvent);
           return;
         }
 
@@ -49,12 +83,17 @@ class FlutterTwilio {
 
         FlutterTwilioCall? call;
 
-        if (event.arguments != null) {
+        // Android historically sent "" here rather than a map; guard on the type instead
+        // of on null so a bad payload is reported rather than silently swallowed.
+        if (event.arguments is Map) {
           try {
             call = FlutterTwilioCall.fromMap(
-              Map<String, dynamic>.from(event.arguments),
+              Map<String, dynamic>.from(event.arguments as Map),
             );
-          } catch (_) {}
+          } catch (error, stack) {
+            log("Twilio: could not parse call payload for ${event.method}",
+                error: error, stackTrace: stack);
+          }
         }
 
         final twilioEvent = FlutterTwilioEvent(eventType, call);
@@ -72,6 +111,7 @@ class FlutterTwilio {
 
   static FlutterTwilioStatus getEventType(String event) {
     log("Twilio event: $event");
+    if (event == "callIncoming") return FlutterTwilioStatus.incoming;
     if (event == "callConnecting") return FlutterTwilioStatus.connecting;
     if (event == "callDisconnected") return FlutterTwilioStatus.disconnected;
     if (event == "missedCall") return FlutterTwilioStatus.missedCall;
@@ -91,6 +131,15 @@ class FlutterTwilio {
         .asBroadcastStream()
         .where(
             (event) => event.status == FlutterTwilioStatus.connecting);
+  }
+
+  /// Fires when an invite arrives and starts ringing, before it is answered. Only
+  /// delivered while the Dart isolate is alive; a call that wakes the app from a
+  /// terminated state is handled natively instead.
+  static Stream<FlutterTwilioEvent> get onCallIncoming {
+    return _streamController.stream
+        .asBroadcastStream()
+        .where((event) => event.status == FlutterTwilioStatus.incoming);
   }
 
   static Future<FlutterTwilioCall> makeCall({
@@ -130,8 +179,11 @@ class FlutterTwilio {
 
     try {
       await _channel.invokeMethod('register', args);
-    } catch (e) {
-      log("Twilio register failed: $e");
+    } catch (e, stack) {
+      // Rethrow: swallowing this left callers believing registration had succeeded while
+      // the device silently received no incoming calls at all.
+      log("Twilio register failed", error: e, stackTrace: stack);
+      rethrow;
     }
   }
 

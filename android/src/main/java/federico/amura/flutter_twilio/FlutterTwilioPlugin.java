@@ -12,7 +12,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
+import com.twilio.voice.CancelledCallInvite;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -63,7 +65,11 @@ public class FlutterTwilioPlugin implements
             this.broadcastReceiver = new CustomBroadcastReceiver(this);
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(TwilioConstants.ACTION_ACCEPT);
-            intentFilter.addAction(TwilioConstants.ACTION_MISSED_CALL); // 🔥 ADD THIS
+            intentFilter.addAction(TwilioConstants.ACTION_MISSED_CALL);
+            // Without this the service's cancelled-call broadcast was never delivered, so
+            // an in-app incoming-call UI had no way to know the caller hung up.
+            intentFilter.addAction(TwilioConstants.ACTION_CANCEL_CALL);
+            intentFilter.addAction(TwilioConstants.ACTION_INCOMING_CALL);
             LocalBroadcastManager.getInstance(this.context).registerReceiver(this.broadcastReceiver, intentFilter);
         }
     }
@@ -119,12 +125,80 @@ public class FlutterTwilioPlugin implements
                 CallInvite callInvite = intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
                 answer(callInvite);
             }
-            if (TwilioConstants.ACTION_MISSED_CALL.equals(action)) {
+            if (TwilioConstants.ACTION_INCOMING_CALL.equals(action)) {
                 if (responseChannel != null) {
-                    responseChannel.invokeMethod("missedCall", "");
+                    CallInvite callInvite =
+                            intent.getParcelableExtra(TwilioConstants.EXTRA_INCOMING_CALL_INVITE);
+                    if (callInvite != null) {
+                        responseChannel.invokeMethod("callIncoming", buildInviteDetails(
+                                callInvite.getFrom(),
+                                callInvite.getTo(),
+                                callInvite.getCustomParameters(),
+                                "callIncoming"
+                        ));
+                    }
+                }
+            }
+            if (TwilioConstants.ACTION_MISSED_CALL.equals(action)
+                    || TwilioConstants.ACTION_CANCEL_CALL.equals(action)) {
+                if (responseChannel != null) {
+                    CancelledCallInvite cancelledCallInvite =
+                            intent.getParcelableExtra(TwilioConstants.EXTRA_CANCELLED_CALL_INVITE);
+                    responseChannel.invokeMethod("missedCall", cancelledCallInvite == null
+                            ? buildInviteDetails(null, null, null, "missedCall")
+                            : buildInviteDetails(
+                                    cancelledCallInvite.getFrom(),
+                                    cancelledCallInvite.getTo(),
+                                    cancelledCallInvite.getCustomParameters(),
+                                    "missedCall"
+                            ));
                 }
             }
         }
+    }
+
+    /**
+     * Builds the same payload shape as TwilioUtils.getCallDetails so the Dart model can
+     * parse it. The missed-call event previously sent an empty string, which failed to
+     * parse and left the Dart side with no idea who had called.
+     */
+    private Map<String, Object> buildInviteDetails(
+            String from,
+            String to,
+            Map<String, String> params,
+            String status
+    ) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", "");
+        map.put("mute", false);
+        map.put("speaker", false);
+        map.put("outgoing", false);
+        map.put("status", status);
+        map.put("to", to == null ? "" : to.replace("client:", ""));
+
+        String fromDisplayName = null;
+        String toDisplayName = null;
+
+        if (params != null) {
+            fromDisplayName = params.get("fromDisplayName");
+            toDisplayName = params.get("toDisplayName");
+            map.put("customParameters", params);
+        }
+
+        if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
+            fromDisplayName = PreferencesUtils.getInstance(this.context).findContactName(from);
+        }
+
+        if (fromDisplayName == null || fromDisplayName.trim().isEmpty()) {
+            fromDisplayName = "Unknown name";
+        }
+        if (toDisplayName == null || toDisplayName.trim().isEmpty()) {
+            toDisplayName = "Unknown name";
+        }
+
+        map.put("fromDisplayName", fromDisplayName);
+        map.put("toDisplayName", toDisplayName);
+        return map;
     }
     @Override
     public void onMethodCall(MethodCall call, @NonNull Result result) {
@@ -136,8 +210,13 @@ public class FlutterTwilioPlugin implements
                 String identity = call.argument("identity");
                 String accessToken = call.argument("accessToken");
                 String fcmToken = call.argument("fcmToken");
-                Log.e(TAG, "identity: " + identity + " ,accessToken: " + accessToken + " ,fcmToken: " + fcmToken);
+                // Never log the access token or FCM token: the access token is a signed JWT
+                // that can place calls on this account.
+                Log.e(TAG, "register. identity: " + identity);
 
+                // The listener may fire before register() returns, so track whether the
+                // reply has already gone out to avoid "Reply already submitted".
+                final boolean[] replied = {false};
                 try {
                     twilioUtils.register(identity, accessToken, fcmToken, new TwilioRegistrationListener() {
                         @Override
@@ -148,7 +227,10 @@ public class FlutterTwilioPlugin implements
                                 responseChannel.invokeMethod("registrationSuccess", "");
                             }
 
-                            result.success("");
+                            if (!replied[0]) {
+                                replied[0] = true;
+                                result.success("");
+                            }
                         }
 
                         @Override
@@ -159,12 +241,21 @@ public class FlutterTwilioPlugin implements
                                 responseChannel.invokeMethod("registrationFailed", "");
                             }
 
-                            result.error("REGISTER_ERROR", "Twilio registration failed", null);
+                            if (!replied[0]) {
+                                replied[0] = true;
+                                result.error("REGISTER_ERROR", "Twilio registration failed", null);
+                            }
                         }
                     });
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("REGISTER_ERROR", "Twilio registration failed", null);
+                    if (responseChannel != null) {
+                        responseChannel.invokeMethod("registrationFailed", "");
+                    }
+                    if (!replied[0]) {
+                        replied[0] = true;
+                        result.error("REGISTER_ERROR", "Twilio registration failed", exception.getMessage());
+                    }
                 }
             }
             break;
@@ -191,7 +282,13 @@ public class FlutterTwilioPlugin implements
                     result.success(twilioUtils.getCallDetails());
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -205,7 +302,13 @@ public class FlutterTwilioPlugin implements
                     result.success(isMuted);
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -216,7 +319,13 @@ public class FlutterTwilioPlugin implements
                     result.success(isMuted);
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -231,7 +340,13 @@ public class FlutterTwilioPlugin implements
                     result.success(isSpeaker);
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -243,7 +358,13 @@ public class FlutterTwilioPlugin implements
                     result.success("");
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -254,7 +375,13 @@ public class FlutterTwilioPlugin implements
                     result.success(isSpeaker);
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -265,7 +392,13 @@ public class FlutterTwilioPlugin implements
                     result.success("");
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -344,7 +477,13 @@ public class FlutterTwilioPlugin implements
                     result.success("");
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
@@ -367,10 +506,21 @@ public class FlutterTwilioPlugin implements
                     result.success("");
                 } catch (Exception exception) {
                     exception.printStackTrace();
-                    result.error("", "", "");
+                    // Propagate a real code/message so Dart can distinguish "no active
+                    // call" from "call in progress" from a network failure.
+                    result.error(
+                            exception.getClass().getSimpleName(),
+                            exception.getMessage(),
+                            null
+                    );
                 }
             }
             break;
+
+            default:
+                // Without this an unrecognised method leaves the Dart Future pending forever.
+                result.notImplemented();
+                break;
         }
     }
 

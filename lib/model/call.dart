@@ -12,6 +12,10 @@ class FlutterTwilioCall extends Equatable {
   final bool speaker;
   final String to;
 
+  /// Custom SIP parameters supplied by the server for incoming calls. Both platforms
+  /// already send these; they were previously dropped on the floor here.
+  final Map<String, String> customParameters;
+
   FlutterTwilioCall({
     required this.id,
     required this.fromDisplayName,
@@ -20,9 +24,12 @@ class FlutterTwilioCall extends Equatable {
     required this.speaker,
     required this.status,
     required this.outgoing,required this.to,
+    this.customParameters = const <String, String>{},
   });
 
   factory FlutterTwilioCall.fromMap(Map<String, dynamic> data) {
+    final rawParams = data["customParameters"];
+
     return FlutterTwilioCall(
       id: data["id"] ?? "",
       fromDisplayName: data["fromDisplayName"] ?? "",
@@ -32,6 +39,11 @@ class FlutterTwilioCall extends Equatable {
       speaker: data["speaker"] ?? false,
       status: FlutterTwilio.getEventType(data["status"] ?? ""),
       to: data["to"] ?? "",
+      customParameters: rawParams is Map
+          ? rawParams.map(
+              (key, value) => MapEntry(key.toString(), value?.toString() ?? ""),
+            )
+          : const <String, String>{},
     );
   }
 
@@ -44,5 +56,7 @@ class FlutterTwilioCall extends Equatable {
         mute,
         speaker,
         status,
+        to,
+        customParameters,
       ];
 }

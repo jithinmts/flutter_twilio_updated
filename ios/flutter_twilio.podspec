@@ -17,6 +17,9 @@ Provides an interface to Twilio&#x27;s Programmable Voice SDK to allows adding v
   s.dependency 'Flutter'
   s.dependency 'TwilioVoice','~> 6.0.0'
 
-  s.ios.deployment_target = '10.0'
+  # TwilioVoice 6.x requires iOS 12.0+; declaring 10.0 caused a pod-install
+  # platform conflict in host apps.
+  s.ios.deployment_target = '12.0'
+  s.swift_version = '5.0'
 end
 

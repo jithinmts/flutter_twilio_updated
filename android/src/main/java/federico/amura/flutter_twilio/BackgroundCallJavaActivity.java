@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -34,6 +35,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.graphics.drawable.RoundedBitmapDrawable;
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 import androidx.core.widget.ImageViewCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -47,6 +50,7 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import federico.amura.flutter_twilio.Utils.ImageLoaderUtils;
 import federico.amura.flutter_twilio.Utils.PreferencesUtils;
 import federico.amura.flutter_twilio.Utils.TwilioConstants;
 import federico.amura.flutter_twilio.Utils.TwilioUtils;
@@ -89,6 +93,8 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
     Runnable runnable;
     int delay = 1000;
     private volatile boolean activityDestroyed = false;
+    /** Phone number whose avatar has already been requested, to avoid repeat loads. */
+    private String avatarLoadedFor = null;
     private long callConnectedTime = 0L;
     private Call.Listener callListener;
     @Override
@@ -587,6 +593,41 @@ public class BackgroundCallJavaActivity extends AppCompatActivity implements Sen
         } else {
             textPhoneNumber.setVisibility(View.GONE);
         }
+
+        loadAvatar(phoneNumber);
+    }
+
+    /**
+     * Replaces the placeholder person icon with the caller's stored photo, if there is one.
+     * updateCallDetails runs on every state change, so only load once per number.
+     */
+    private void loadAvatar(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.equals(this.avatarLoadedFor)) return;
+
+        final String photoUrl = PreferencesUtils.getInstance(this).findContactPhotoUrl(phoneNumber);
+        if (photoUrl == null) return;
+
+        this.avatarLoadedFor = phoneNumber;
+
+        ImageLoaderUtils.load(photoUrl, bitmap -> {
+            if (activityDestroyed || isFinishing()) return;
+            applyAvatar(bitmap);
+        });
+    }
+
+    private void applyAvatar(Bitmap bitmap) {
+        RoundedBitmapDrawable drawable =
+                RoundedBitmapDrawableFactory.create(getResources(), bitmap);
+        drawable.setCircular(true);
+
+        // The placeholder icon is small and tinted; the photo fills the whole circle.
+        ImageViewCompat.setImageTintList(this.image, null);
+        ViewGroup.LayoutParams params = this.image.getLayoutParams();
+        params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+        params.height = ViewGroup.LayoutParams.MATCH_PARENT;
+        this.image.setLayoutParams(params);
+        this.image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        this.image.setImageDrawable(drawable);
     }
     private void close() {
         Log.e("*TwilioCallCloseMethod******", "....01");

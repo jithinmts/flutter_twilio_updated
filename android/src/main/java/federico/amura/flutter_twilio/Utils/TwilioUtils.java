@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import federico.amura.flutter_twilio.Utils.SoundUtils;
-import federico.amura.flutter_twilio.BackgroundCallJavaActivity;
 public class TwilioUtils {
     private static final String TAG = "TwilioUtils";
 
@@ -49,6 +48,8 @@ public class TwilioUtils {
     private String toDisplayName;
     private Context context;
     private String status;
+    /** Number dialled for the current outgoing call, surfaced to Dart as "to". */
+    private String callTo;
 
     public void register(String identity, String accessToken, String fcmToken, TwilioRegistrationListener listener) {
         PreferencesUtils.getInstance(this.context).storeAccess(identity, accessToken, fcmToken);
@@ -144,6 +145,7 @@ public class TwilioUtils {
 
         this.status = "callConnecting";
         callInvite = null;
+        this.callTo = to;
         this.fromDisplayName = fromDisplayName;
         this.toDisplayName = toDisplayName;
         activeCall = Voice.connect(this.context, connectOptions, getCallListener(listener));
@@ -151,9 +153,9 @@ public class TwilioUtils {
 
     public void sendDigits(String digit) {
         if (activeCall != null) {
-            Log.e(TAG, "sending digit: " + digit);
+            // Do not log the digits themselves - they may be card or PIN entry.
             activeCall.sendDigits(digit);
-            Log.e(TAG, "digit sent: ");
+            Log.e(TAG, "digits sent");
         } else {
             Log.e(TAG, "Error sending digits, no active call");
         }
@@ -312,6 +314,10 @@ public class TwilioUtils {
             map.put("customParameters", callInvite.getCustomParameters());
         }
 
+        // Was never populated, so Dart's Call.to was always "".
+        String to = callInvite != null ? callInvite.getTo() : this.callTo;
+        map.put("to", to == null ? "" : to.replace("client:", ""));
+
         map.put("fromDisplayName", this.getFromDisplayName());
         map.put("toDisplayName", this.getToDisplayName());
         map.put("outgoing", callInvite == null);
@@ -389,13 +395,6 @@ public class TwilioUtils {
 
                 status = "callDisconnected";
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onConnectFailure(call, e);
                 }
 
@@ -409,13 +408,6 @@ public class TwilioUtils {
                 activeCall = call;
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing()) return;
-                    }
-
                     listener.onRinging(call);
                 }
             }
@@ -432,13 +424,6 @@ public class TwilioUtils {
                 status = "callConnected";
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onConnected(call);
                 }
             }
@@ -452,13 +437,6 @@ public class TwilioUtils {
                 status = "callReconnecting";
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onReconnecting(call, e);
                 }
             }
@@ -470,13 +448,6 @@ public class TwilioUtils {
                 status = "callReconnected";
 
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onReconnected(call);
                 }
             }
@@ -491,13 +462,6 @@ public class TwilioUtils {
                 fromDisplayName = null;
                 toDisplayName = null;
                 if (listener != null) {
-                    if (context instanceof BackgroundCallJavaActivity) {
-                        BackgroundCallJavaActivity activity =
-                                (BackgroundCallJavaActivity) context;
-
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                    }
-
                     listener.onDisconnected(call, e);
                 }
                 if (e != null) {
